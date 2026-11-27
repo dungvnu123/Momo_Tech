@@ -20,6 +20,36 @@ uv run gen_data.py
 
 Kết quả: `data/applications.csv` (200.000 hồ sơ), `data/wallet_transfers.csv`, `data/scam_reports.csv`, `data/ground_truth.json`, kèm tự kiểm tra và bảng baseline luật. Chỉ dùng thư viện chuẩn Python 3.10+.
 
+## Chạy chung giao diện, backend và AI
+
+```bash
+uv sync --locked
+uv run python -X utf8 gen_data.py --out data/backend
+uv run python -X utf8 build.py --data data/backend --db thienla.db
+uv run python -m app.graph build --data-dir data/backend --database data/backend/graph.db
+```
+
+Tạo `.env` theo `.env.example`, điền `LLM_API_KEY` và `LLM_MODEL_NAME`, rồi chạy:
+
+```bash
+uv run uvicorn app.main:app --host 127.0.0.1 --port 4420
+```
+
+Mở [giao diện](http://127.0.0.1:4420/), [luồng chức năng](http://127.0.0.1:4420/flows/)
+hoặc [Swagger](http://127.0.0.1:4420/docs). Các API `/api/shield/analyze`,
+`/api/transfer/check` và `/api/alerts/{id}/investigate` gọi AI thật. Agent vẫn
+kế thừa `BaseAgent`, dùng chung workflow và giới hạn 12 tool call.
+
+`build.py` dựng cảnh báo và kết luận mẫu **bằng luật, không gọi LLM**. Những kết
+quả này có `mode=mock` và được ghi rõ là giả lập trên giao diện. Bấm **Điều tra**
+để chạy Gemini, thay kết luận mẫu bằng kết quả Agent nếu phiên chạy thành công.
+Các bộ đếm đánh giá có thể chứa cả kết quả mẫu và kết quả AI đã chạy.
+
+Agent từ giao diện dùng tool đọc `thienla.db` tại thời điểm cảnh báo (`as_of`);
+API `/api/investigations` dùng graph chỉ định bởi `GRAPH_DATABASE`, là ảnh chụp
+toàn bộ dữ liệu đã build. Hai đường chạy dùng cùng Agent và bộ kiểm tra kết luận.
+Chi tiết: [docs/backend_integration.md](docs/backend_integration.md).
+
 ## Trạng thái
 - [x] BaseAgent + LangGraph, AgentManager và controller FastAPI
 - [x] Module graph dữ liệu riêng: SQLite, quan hệ có nguồn bằng chứng và graph con NetworkX
@@ -27,8 +57,8 @@ Kết quả: `data/applications.csv` (200.000 hồ sơ), `data/wallet_transfers.
 - [x] AI phân tích tin báo, hợp nhất thực thể, sàng lọc cụm và đánh giá giao dịch
 - [x] Sinh dữ liệu mô phỏng + baseline luật
 - [x] Tài liệu thiết kế
-- [ ] Tự tạo cụm ứng viên toàn bộ dữ liệu và tích hợp nghiệp vụ backend/frontend
-- [ ] Giao diện, triển khai online
+- [x] Backend dựng cụm ứng viên, giao diện và luồng điều tra gọi AI
+- [ ] Triển khai online
 
 ## Môi trường phát triển
 

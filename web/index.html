@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thiên La</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23A50064'/%3E%3Cpath d='M6 10h20M6 16h20M6 22h20M10 6v20M16 6v20M22 6v20' stroke='white' stroke-width='1.6' opacity='.9'/%3E%3C/svg%3E">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <span class="logo" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M6 10h20M6 16h20M6 22h20M10 6v20M16 6v20M22 6v20"/></svg></span>
+    <div><b>Thiên La</b><small>Truy vết đường dây lừa đảo tín dụng</small></div>
+  </div>
+  <nav class="tabs" role="tablist">
+    <button data-tab="overview" class="on">Tổng quan</button>
+    <button data-tab="shield">Lá chắn</button>
+    <button data-tab="transfer">Chuyển tiền</button>
+    <button data-tab="net">Lưới &amp; Thám tử</button>
+    <a href="flows/" target="_blank" rel="noopener">Luồng ↗</a>
+  </nav>
+  <span id="mode" class="mode"></span>
+</header>
+
+<main>
+  <!-- TỔNG QUAN -->
+  <section id="overview" class="tab on">
+    <div class="hero">
+      <div>
+        <h1>Một người bị lừa báo tin,<br>cả đường dây lộ diện.</h1>
+        <p>Trợ lý AI cho đội rủi ro của ngân hàng cho vay và nền tảng ví: ghép hồ sơ vay, tín hiệu kỹ thuật, dòng tiền sau giải ngân và tin báo của khách để tách <b>kẻ gian cần chặn</b> khỏi <b>nạn nhân cần bảo vệ</b>.</p>
+      </div>
+      <svg class="hero-net" viewBox="0 0 200 140" aria-hidden="true"><g></g></svg>
+    </div>
+    <h2>Phễu xử lý</h2>
+    <div id="funnel" class="funnel"></div>
+    <h2>So với luật cố định</h2>
+    <div id="compare" class="grid3"></div>
+    <h2 style="margin-top:28px">Phát hiện nhanh cỡ nào</h2>
+    <p class="muted">Từ lúc hồ sơ đầu tiên của nhóm xuất hiện đến cảnh báo đầu tiên — bộ máy chỉ dùng dữ liệu đã xảy ra tới thời điểm đó.</p>
+    <div id="ttd" class="card"></div>
+    <p class="note">Số liệu trên dữ liệu mô phỏng 200.000 hồ sơ (thương hiệu “FinVay” hư cấu). Đáp án chỉ dùng để chấm, không tham gia quyết định.</p>
+  </section>
+
+  <!-- LÁ CHẮN -->
+  <section id="shield" class="tab">
+    <div class="two">
+      <div class="card">
+        <h2>Tin này thật hay giả?</h2>
+        <p class="muted">Dán tin nhắn, đường link, số tài khoản hoặc ví mà bạn nghi ngờ.</p>
+        <div id="shield-samples" class="chips"></div>
+        <textarea id="shield-text" rows="7" placeholder="Ví dụ: FINVAY THONG BAO: Quy khach duoc GIAM 50% LAI neu tat toan som…"></textarea>
+        <button id="shield-go" class="btn">Kiểm tra</button>
+      </div>
+      <div id="shield-out" class="card result empty"><p class="muted">Kết quả sẽ hiện ở đây.</p></div>
+    </div>
+  </section>
+
+  <!-- CHUYỂN TIỀN -->
+  <section id="transfer" class="tab">
+    <div class="two">
+      <div class="card">
+        <h2>Giao dịch sắp chuyển đi</h2>
+        <p class="muted">Giao dịch thật trong dữ liệu, ngay sau khi khoản vay được giải ngân. Chọn một giao dịch để xem nền tảng ví sẽ xử lý thế nào.</p>
+        <div id="transfer-list" class="list"></div>
+      </div>
+      <div id="transfer-out" class="card empty"><p class="muted">Chọn một giao dịch.</p></div>
+    </div>
+  </section>
+
+  <!-- LƯỚI & THÁM TỬ -->
+  <section id="net" class="tab">
+    <div class="card toolbar">
+      <div class="tb-row">
+        <div><h2>Hàng đợi điều tra</h2><p class="muted" id="net-sub">Cảnh báo sinh ra theo thời gian thật khi một cụm vượt ngưỡng hoặc có bằng chứng mới.</p></div>
+        <div class="live">
+          <span id="clock" class="clock">—</span>
+          <select id="speed" title="Tốc độ phát lại"><option value="24">1 ngày = 24 giây</option><option value="12" selected>1 ngày = 12 giây</option><option value="4">1 ngày = 4 giây</option></select>
+          <button id="live-btn" class="btn ghost">▶ Phát realtime</button>
+        </div>
+      </div>
+      <div id="days" class="days" title="Số cảnh báo mỗi ngày — bấm để lọc"></div>
+      <div id="days-axis" class="axis"></div>
+      <div class="hours-wrap">
+        <div class="hours-head"><b>Khung giờ</b><span id="hours-sub" class="muted"></span>
+          <span class="hchips"><button class="chip sel" data-h="0-24">Mọi giờ</button><button class="chip" data-h="0-6">Đêm 0–6h</button>
+          <button class="chip" data-h="6-12">Sáng 6–12h</button><button class="chip" data-h="12-18">Chiều 12–18h</button><button class="chip" data-h="18-24">Tối 18–24h</button></span></div>
+        <div id="hours" class="hours"></div>
+        <div id="hours-axis" class="axis hours-axis"></div>
+      </div>
+      <div class="filters">
+        <button class="chip sel" id="day-all">Mọi ngày</button>
+        <span class="chip-day" id="day-chip" hidden></span>
+        <span class="sep"></span>
+        <button class="chip sev" data-sev="khan">Khẩn</button><button class="chip sev" data-sev="cao">Cao</button><button class="chip sev" data-sev="tb">Trung bình</button>
+        <span class="sep"></span>
+        <select id="f-kind"><option value="">Mọi loại</option><option value="cluster">Cụm hồ sơ</option><option value="transfer">Giao dịch tạm giữ</option></select>
+        <select id="f-verdict"><option value="">Mọi kết luận</option><option value="fraud_ring">Đường dây</option><option value="victims">Nạn nhân</option><option value="benign">Vô hại</option><option value="none">Chưa điều tra</option></select>
+        <label class="conf">Tin cậy ≥ <input id="f-conf" type="range" min="0" max="0.9" step="0.1" value="0"><b id="f-conf-v">0%</b></label>
+        <label class="chk"><input id="f-latest" type="checkbox" checked> Mỗi cụm 1 dòng</label>
+        <input id="f-q" type="search" placeholder="Tìm mã cụm / hồ sơ">
+        <select id="f-sort"><option value="priority">Ưu tiên cao nhất</option><option value="time">Mới nhất</option><option value="confidence">Tin cậy cao nhất</option><option value="size">Cụm lớn nhất</option></select>
+      </div>
+    </div>
+    <div class="net">
+      <aside class="card side">
+        <p class="muted" id="list-sub"></p>
+        <div id="alert-list" class="list"></div>
+      </aside>
+      <div class="card stage">
+        <div class="stage-head">
+          <div><h2 id="cl-title">Chọn một cảnh báo</h2><p class="muted" id="cl-sub"></p></div>
+          <button id="investigate" class="btn" disabled>Điều tra</button>
+        </div>
+        <div id="history" class="history"></div>
+        <div id="graph"></div>
+        <div class="legend">
+          <span><i class="dot app"></i>Hồ sơ vay</span><span><i class="dot dev"></i>Thiết bị</span><span><i class="dot ref"></i>SĐT tham chiếu</span>
+          <span><i class="dot rcv"></i>Nơi nhận tiền</span><span><i class="dot ip"></i>Dải IP / lô SIM</span>
+          <span class="muted">· Bấm vào 1 hồ sơ để xem dòng thời gian</span>
+          <button id="fit" class="chip" style="margin-left:auto" title="Đưa đồ thị về vừa khung (hoặc bấm đúp vào nền)">⤢ Vừa khung</button>
+        </div>
+        <div id="dossier" class="dossier" hidden></div>
+        <div class="split">
+          <ol id="log" class="log"></ol>
+          <div id="case" class="case empty"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script src="flows/static/vendor/cytoscape-3.30.2.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

@@ -5,6 +5,7 @@ description = "Thiên La — nền tảng Agent truy vết gian lận tín dụn
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.165.0",
+    "feature-flow[server]",
     "google-genai>=3.6.1",
     "langgraph>=1.2.24",
     "networkx>=3.7",
@@ -20,3 +21,6 @@ package = false
 dev = [
     "httpx>=0.29.0",
 ]
+
+[tool.uv.sources]
+feature-flow = { git = "https://github.com/hoangvunghi/feature-flow", rev = "13133d5863c3f68adddacbd42158cddfe5a547c7" }

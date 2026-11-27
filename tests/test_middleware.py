@@ -77,7 +77,7 @@ class MiddlewareTests(unittest.TestCase):
             self.assertNotIn(secret, str(record.__dict__))
 
     def test_unhandled_error_has_a_safe_response_and_request_id(self):
-        application = self.app(service_api_key="")
+        application = self.app(service_api_key="", backend_database=False)
 
         @application.get("/explode")
         async def explode():

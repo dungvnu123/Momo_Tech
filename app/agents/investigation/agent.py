@@ -21,7 +21,7 @@ class InvestigationAgent(BaseAgent):
     prompt_file = Path(__file__).with_name("prompt.md")
 
     def __init__(self, llm_client, *, database="data/graph.db", max_tool_calls=12,
-                 timeout_seconds=180.0, operation_timeout=30.0):
+                 timeout_seconds=180.0, operation_timeout=30.0, tools_factory=None):
         super().__init__(llm_client, timeout_seconds=timeout_seconds)
         if type(max_tool_calls) is not int or not 1 <= max_tool_calls <= 12:
             raise ValueError("max_tool_calls must be an integer from 1 to 12")
@@ -30,6 +30,7 @@ class InvestigationAgent(BaseAgent):
         self.database = Path(database)
         self.max_tool_calls = max_tool_calls
         self.operation_timeout = operation_timeout
+        self.tools_factory = tools_factory
 
     def _get_graph(self):
         if self._graph is None:
@@ -47,7 +48,8 @@ class InvestigationAgent(BaseAgent):
         state = {
             "messages": [ToolMessage(role="system", content=self.system_prompt),
                          ToolMessage(role="user", content=instruction)],
-            "tools": GraphTools(self.database), "calls": [], "steps": [], "turns": 0,
+            "tools": self.tools_factory() if self.tools_factory else GraphTools(self.database),
+            "calls": [], "steps": [], "turns": 0,
             "case": None, "reason": None, "events": [],
         }
         yield "started", {"run_id": run_id, "app_id": request.app_id}

@@ -7,3 +7,6 @@ __pycache__/
 ~$*
 .tools/
 .uv-cache/
+
+*.db-wal
+*.db-shm

@@ -1,0 +1,339 @@
+{
+  "id": "thienla-vong-doi-ho-so",
+  "title": "Vòng đời 1 hồ sơ vay — mỗi bước là 1 bảng có mốc thời gian",
+  "kind": "flow",
+  "look": "flat",
+  "visibility": "private",
+  "doc_md": "",
+  "group": "Thiên La",
+  "subtitle": "Nộp → eKYC → duyệt → giải ngân → chuyển tiền → đến hạn → trả hoặc quá hạn. Quá hạn tính TẠI từng thời điểm.",
+  "duration": "dữ liệu",
+  "level": "Nền tảng",
+  "learn": [
+    "Không có cột 'quá hạn' chốt sẵn — tính từ lịch trả + các lần trả",
+    "Mỗi bước để lại dấu vết riêng: eKYC, dòng tiền, tin báo",
+    "Bộ máy chỉ được thấy bước đã xảy ra tới thời điểm đang xét"
+  ],
+  "notes": [],
+  "nodes": [
+    {
+      "id": "s1",
+      "type": "start",
+      "label": "",
+      "explain": "",
+      "step": 0,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "",
+      "badge": ""
+    },
+    {
+      "id": "p2",
+      "type": "process",
+      "label": "Nộp hồ sơ",
+      "explain": "applied_at + thông tin khai báo + tín hiệu kỹ thuật lúc nộp: thiết bị, IP (di động/nhà/VPN/datacenter), tuổi SIM, giả lập, thời gian điền đơn.",
+      "step": 1,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "user",
+      "badge": "applications"
+    },
+    {
+      "id": "p3",
+      "type": "process",
+      "label": "eKYC khuôn mặt",
+      "explain": "Mỗi lần thử là 1 dòng: thời điểm, thiết bị, liveness, máy bị hook/root, đạt/trượt. Liveness sát ngưỡng + thử nhiều lần + máy mới gắn ví = dấu hiệu vượt eKYC.",
+      "step": 2,
+      "color": "#cdb8ec",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "lock",
+      "badge": "ekyc_sessions"
+    },
+    {
+      "id": "d4",
+      "type": "decision",
+      "label": "Duyệt?",
+      "explain": "decided_at + decision (APPROVED/REJECTED). Hồ sơ chưa có quyết định = đang chờ.",
+      "step": 3,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "",
+      "badge": ""
+    },
+    {
+      "id": "p5",
+      "type": "process",
+      "label": "Từ chối",
+      "explain": "Dừng ở đây.",
+      "step": 4,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "",
+      "badge": ""
+    },
+    {
+      "id": "p6",
+      "type": "process",
+      "label": "Giải ngân về ví chính chủ",
+      "explain": "Tiền luôn về tài khoản/ví đứng tên khách (đối chiếu hợp đồng mẫu). Kỳ hạn 3 tháng, lãi 36%/năm.",
+      "step": 4,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "check",
+      "badge": "disbursed_at"
+    },
+    {
+      "id": "p7",
+      "type": "process",
+      "label": "Chuyển tiền đi",
+      "explain": "Mỗi lần chuyển: thời điểm, người nhận, số tiền, ghi chú + ngữ cảnh người nhận (danh bạ & lúc lưu số, đã từng chuyển chưa, SIMO, ví nhận bao nhiêu ngày tuổi).",
+      "step": 5,
+      "color": "#f4b47e",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "api",
+      "badge": "wallet_transfers"
+    },
+    {
+      "id": "p8",
+      "type": "process",
+      "label": "Đến hạn kỳ 1, 2, 3",
+      "explain": "Mỗi kỳ 1 dòng: ngày đến hạn, gốc, lãi.",
+      "step": 6,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "clock",
+      "badge": "repayment_schedule"
+    },
+    {
+      "id": "d9",
+      "type": "decision",
+      "label": "Đã trả?",
+      "explain": "repayments: mỗi lần trả 1 dòng (thời điểm, số tiền, kênh).",
+      "step": 7,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "",
+      "badge": ""
+    },
+    {
+      "id": "p10",
+      "type": "process",
+      "label": "Trả đúng / trễ ít",
+      "explain": "",
+      "step": 8,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "check",
+      "badge": ""
+    },
+    {
+      "id": "p11",
+      "type": "process",
+      "label": "Quá hạn ngay kỳ đầu",
+      "explain": "Đến hạn kỳ 1 + 10 ngày chưa trả → tín hiệu 'fpd'. Đứng riêng = rủi ro tín dụng; nằm trong cụm có quan hệ thì làm cụm nặng thêm.",
+      "step": 8,
+      "color": "#f4b47e",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "alert",
+      "badge": "hậu kiểm"
+    },
+    {
+      "id": "p12",
+      "type": "process",
+      "label": "Tin báo lừa đảo",
+      "explain": "Bất kỳ lúc nào: khách gửi tin nghi lừa hoặc kể bị lừa. Chỉ có chữ thô — AI trích tài khoản/ví/hotline.",
+      "step": 5,
+      "color": "#f4b47e",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "mail",
+      "badge": "scam_reports"
+    },
+    {
+      "id": "e13",
+      "type": "end",
+      "label": "",
+      "explain": "",
+      "step": 9,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "",
+      "badge": ""
+    }
+  ],
+  "edges": [
+    {
+      "source": "s1",
+      "target": "p2",
+      "label": ""
+    },
+    {
+      "source": "p2",
+      "target": "p3",
+      "label": ""
+    },
+    {
+      "source": "p3",
+      "target": "d4",
+      "label": ""
+    },
+    {
+      "source": "d4",
+      "target": "p5",
+      "label": "không"
+    },
+    {
+      "source": "d4",
+      "target": "p6",
+      "label": "có"
+    },
+    {
+      "source": "p6",
+      "target": "p7",
+      "label": ""
+    },
+    {
+      "source": "p6",
+      "target": "p8",
+      "label": ""
+    },
+    {
+      "source": "p8",
+      "target": "d9",
+      "label": ""
+    },
+    {
+      "source": "d9",
+      "target": "p10",
+      "label": "có"
+    },
+    {
+      "source": "d9",
+      "target": "p11",
+      "label": "không"
+    },
+    {
+      "source": "s1",
+      "target": "p12",
+      "label": ""
+    },
+    {
+      "source": "p10",
+      "target": "e13",
+      "label": ""
+    },
+    {
+      "source": "p11",
+      "target": "e13",
+      "label": ""
+    },
+    {
+      "source": "p5",
+      "target": "e13",
+      "label": ""
+    },
+    {
+      "source": "p7",
+      "target": "e13",
+      "label": ""
+    },
+    {
+      "source": "p12",
+      "target": "e13",
+      "label": ""
+    }
+  ],
+  "steps": [
+    {
+      "n": 1,
+      "title": "Nộp hồ sơ",
+      "body": "Bảng applications: 200.000 hồ sơ từ 01/06 tới 25/11/2026.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 2,
+      "title": "eKYC",
+      "body": "Bảng ekyc_sessions: mỗi lần thử 1 dòng.",
+      "note": "Nhận ra khuôn mặt giả là việc của nhà cung cấp eKYC; Thiên La bắt BỐI CẢNH quanh phiên eKYC.",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 3,
+      "title": "Quyết định",
+      "body": "Có mốc decided_at → đếm được 'hồ sơ đang chờ' tại đúng thời điểm, không dùng trạng thái cuối.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 4,
+      "title": "Giải ngân",
+      "body": "Mục đích 'hoàn ứng vốn tự có' → tiền là của khách, không kiểm soát được sau giải ngân.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 5,
+      "title": "Dòng tiền + tin báo",
+      "body": "Hai nguồn dấu vết chính: tiền đi đâu, và ai báo gì.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 6,
+      "title": "Lịch trả",
+      "body": "3 kỳ, mỗi kỳ 1 dòng.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 7,
+      "title": "Trả hay không",
+      "body": "Quá hạn = ngày đang xét − ngày đến hạn của kỳ đầu tiên chưa trả.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 8,
+      "title": "Hậu kiểm",
+      "body": "Quá hạn ngay kỳ đầu là dấu vết DUY NHẤT của kẻ gian lẻ loi — bắt sau, không bắt trước được.",
+      "note": "",
+      "note_type": "info",
+      "badge": "TRUNG THỰC"
+    }
+  ],
+  "arrows": [],
+  "groups": []
+}

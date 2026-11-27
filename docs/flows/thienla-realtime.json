@@ -1,0 +1,339 @@
+{
+  "id": "thienla-realtime",
+  "title": "Bộ máy realtime: từ 1 sự kiện tới 1 cảnh báo",
+  "kind": "flow",
+  "look": "iso",
+  "visibility": "private",
+  "doc_md": "",
+  "group": "Thiên La",
+  "subtitle": "app/engine.py — 741.593 sự kiện xử lý theo đúng thứ tự thời gian trong ~8 giây, sinh 345 cảnh báo.",
+  "duration": "kỹ thuật",
+  "level": "Chi tiết",
+  "learn": [
+    "Chỉ cập nhật cụm bị chạm tới — không tính lại từ đầu",
+    "Không nhìn trước tương lai: mọi quyết định chỉ dùng dữ liệu đã xảy ra",
+    "AI chỉ được gọi khi cụm vượt ngưỡng — giữ chi phí và tốc độ"
+  ],
+  "notes": [],
+  "nodes": [
+    {
+      "id": "s1",
+      "type": "start",
+      "label": "",
+      "explain": "",
+      "step": 0,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "",
+      "badge": ""
+    },
+    {
+      "id": "p2",
+      "type": "process",
+      "label": "Sự kiện tới",
+      "explain": "Nộp hồ sơ · chuyển tiền · tin báo · trả nợ · kiểm tra quá hạn kỳ 1 (lịch hẹn giờ của chính hệ thống). Bản thi: phát lại theo thời gian; chạy thật: đọc hàng đợi sự kiện.",
+      "step": 1,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "queue",
+      "badge": "5 loại"
+    },
+    {
+      "id": "d3",
+      "type": "decision",
+      "label": "Là chuyển tiền?",
+      "explain": "",
+      "step": 2,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "",
+      "badge": ""
+    },
+    {
+      "id": "p4",
+      "type": "process",
+      "label": "Cảnh báo lúc chuyển tiền",
+      "explain": "Ngữ cảnh khoản vay vừa giải ngân + người nhận (danh bạ, lịch sử, SIMO, số tin báo ĐÃ có tới giờ) → cho phép / cảnh báo / tạm giữ.",
+      "step": 3,
+      "color": "#f4b47e",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "lock",
+      "badge": "< 1 giây"
+    },
+    {
+      "id": "d5",
+      "type": "decision",
+      "label": "Tạm giữ?",
+      "explain": "",
+      "step": 4,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "",
+      "badge": ""
+    },
+    {
+      "id": "p6",
+      "type": "process",
+      "label": "Cảnh báo giao dịch",
+      "explain": "Vào hàng đợi với mức Khẩn.",
+      "step": 5,
+      "color": "#f4b47e",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "alert",
+      "badge": "60 lần"
+    },
+    {
+      "id": "p7",
+      "type": "process",
+      "label": "Cập nhật đồ thị",
+      "explain": "Nối hồ sơ qua điểm dùng chung: thiết bị, SĐT tham chiếu, dải IP VPN, lô SIM mới, nơi nhận tiền (đã siết: ≤2h, ≥30% khoản vay, chưa từng chuyển), máy mở ví nhận, tài khoản/hotline trong tin báo. Dữ liệu chỉ thêm, không xoá → nối thêm rất rẻ.",
+      "step": 3,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "chart",
+      "badge": "union-find"
+    },
+    {
+      "id": "p8",
+      "type": "process",
+      "label": "Đánh giá cụm vừa đổi",
+      "explain": "Đếm tín hiệu của cụm: tham chiếu chung ≥5, thiết bị chung ≥5, nơi nhận chung, cùng quá hạn kỳ đầu, IP/SIM/giả lập, eKYC bất thường, SIMO, tin báo; số hồ sơ đang chờ TẠI thời điểm này.",
+      "step": 4,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "gear",
+      "badge": ""
+    },
+    {
+      "id": "d9",
+      "type": "decision",
+      "label": "AI sàng lọc: đáng điều tra?",
+      "explain": "ai.triage_clusters — nhận bản tóm tắt số liệu (không PII), trả quyết định + độ tin cậy + lý do.",
+      "step": 5,
+      "color": "#cdb8ec",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "",
+      "badge": ""
+    },
+    {
+      "id": "d10",
+      "type": "decision",
+      "label": "Có bằng chứng mới?",
+      "explain": "So với lần cảnh báo trước của cùng cụm: thêm tín hiệu, thêm tin báo, lớn thêm, đổi số hồ sơ chờ. Không đổi → im lặng, tránh spam.",
+      "step": 6,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "",
+      "badge": ""
+    },
+    {
+      "id": "p11",
+      "type": "process",
+      "label": "Cảnh báo cụm",
+      "explain": "Mức Khẩn/Cao/Trung bình; ưu tiên = mức × 10 + tin cậy × 10 + quy mô + 2 × hồ sơ đang chờ. Giữ mã cụm cũ khi 2 cụm nhập lại → diễn biến liền mạch.",
+      "step": 7,
+      "color": "#f4b47e",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "alert",
+      "badge": "mức + ưu tiên"
+    },
+    {
+      "id": "p12",
+      "type": "process",
+      "label": "Hàng đợi điều tra",
+      "explain": "",
+      "step": 8,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "laptop",
+      "badge": ""
+    },
+    {
+      "id": "e13",
+      "type": "end",
+      "label": "",
+      "explain": "",
+      "step": 9,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "",
+      "badge": ""
+    }
+  ],
+  "edges": [
+    {
+      "source": "s1",
+      "target": "p2",
+      "label": ""
+    },
+    {
+      "source": "p2",
+      "target": "d3",
+      "label": ""
+    },
+    {
+      "source": "d3",
+      "target": "p4",
+      "label": "có"
+    },
+    {
+      "source": "p4",
+      "target": "d5",
+      "label": ""
+    },
+    {
+      "source": "d5",
+      "target": "p6",
+      "label": "có"
+    },
+    {
+      "source": "d5",
+      "target": "p7",
+      "label": "không"
+    },
+    {
+      "source": "d3",
+      "target": "p7",
+      "label": "không"
+    },
+    {
+      "source": "p7",
+      "target": "p8",
+      "label": ""
+    },
+    {
+      "source": "p8",
+      "target": "d9",
+      "label": ""
+    },
+    {
+      "source": "d9",
+      "target": "d10",
+      "label": "có"
+    },
+    {
+      "source": "d9",
+      "target": "e13",
+      "label": "không"
+    },
+    {
+      "source": "d10",
+      "target": "p11",
+      "label": "có"
+    },
+    {
+      "source": "d10",
+      "target": "e13",
+      "label": "không"
+    },
+    {
+      "source": "p6",
+      "target": "p12",
+      "label": ""
+    },
+    {
+      "source": "p11",
+      "target": "p12",
+      "label": ""
+    },
+    {
+      "source": "p12",
+      "target": "e13",
+      "label": ""
+    }
+  ],
+  "steps": [
+    {
+      "n": 1,
+      "title": "Sự kiện",
+      "body": "Mọi thứ thành 1 dòng sự kiện có thời gian.",
+      "note": "Bản thi phát lại dữ liệu theo đồng hồ tua nhanh; code xử lý giống hệt khi chạy thật.",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 2,
+      "title": "Phân luồng",
+      "body": "Chuyển tiền đi cả 2 đường: kiểm tra ngay + cập nhật đồ thị.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 3,
+      "title": "Chặn tại chỗ / nối đồ thị",
+      "body": "Kiểm tra chuyển tiền chỉ dùng tin báo đã có TỚI GIỜ — nạn nhân đầu tiên chưa có ai báo.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 4,
+      "title": "Đánh giá",
+      "body": "Chỉ tính lại cụm vừa bị chạm.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 5,
+      "title": "AI sàng lọc",
+      "body": "Gọi AI theo nhu cầu, không theo từng sự kiện.",
+      "note": "",
+      "note_type": "info",
+      "badge": "AI"
+    },
+    {
+      "n": 6,
+      "title": "Chống spam",
+      "body": "Cụm không có gì mới thì không báo lại.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 7,
+      "title": "Cảnh báo",
+      "body": "Đo được (seed chuẩn): A 18 phút, E/H ~45 phút, D 1 ngày, G 1 ngày, B 1 ngày, F 4 ngày, C 27 ngày.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 8,
+      "title": "Hàng đợi",
+      "body": "Lọc theo ngày, khung giờ, mức độ, kết luận, độ tin cậy.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    }
+  ],
+  "arrows": [],
+  "groups": []
+}

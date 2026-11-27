@@ -1,4 +1,6 @@
 from fastapi import FastAPI
+import os
+from pathlib import Path
 
 from app.agents.default import DefaultAgent
 from app.agents.manager import AgentManager
@@ -17,8 +19,8 @@ from app.middleware import configure_middleware
 
 
 def create_app(llm_client: LLMClient | None = None, *, tool_llm_client=None,
-               graph_database="data/graph.db", ai_cache=None,
-               service_api_key: str | None = None) -> FastAPI:
+               graph_database=None, ai_cache=None,
+               service_api_key: str | None = None, backend_database=None) -> FastAPI:
     load_environment()
     configure_request_logging()
     application = FastAPI(title="Thiên La Agent Service", version="0.1.0")
@@ -31,7 +33,9 @@ def create_app(llm_client: LLMClient | None = None, *, tool_llm_client=None,
     application.state.agent_manager = AgentManager([DefaultAgent(client)])
     application.include_router(agent_router)
     tool_client = tool_llm_client if tool_llm_client is not None else configured_tool_client()
-    application.state.investigation_agent = InvestigationAgent(tool_client, database=graph_database)
+    application.state.tool_llm_client = tool_client
+    database_path = graph_database or os.environ.get("GRAPH_DATABASE", "data/graph.db")
+    application.state.investigation_agent = InvestigationAgent(tool_client, database=database_path)
     application.include_router(investigation_router)
     application.state.ai_service = AIService(tool_client, cache_path=ai_cache)
     application.include_router(ai_router)
@@ -39,6 +43,15 @@ def create_app(llm_client: LLMClient | None = None, *, tool_llm_client=None,
     @application.get("/health")
     async def health_check() -> dict[str, str]:
         return {"status": "ok", "service": "thien-la-agent"}
+
+    database = Path(backend_database or os.environ.get("THIENLA_DB", "thienla.db"))
+    if backend_database is False:
+        return application
+    if database.is_file():
+        from app.backend.routes import mount_backend
+        mount_backend(application, database)
+    elif backend_database is not None:
+        raise FileNotFoundError(database)
 
     return application
 

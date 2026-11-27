@@ -1,0 +1,322 @@
+{
+  "id": "thienla-ca-du-vay",
+  "title": "Ca thật: dụ vay rồi chuyển tiền giải ngân",
+  "kind": "flow",
+  "look": "iso",
+  "visibility": "private",
+  "doc_md": "",
+  "group": "Thiên La",
+  "subtitle": "Kịch bản Công an An Giang cảnh báo 09/11/2026 — và chỗ Thiên La chen vào.",
+  "duration": "2 phút",
+  "level": "Ca demo",
+  "learn": [
+    "eKYC không chặn được khi chính chủ tự vay",
+    "Luật dòng tiền coi nạn nhân là kẻ gian",
+    "AI ghép tin báo + dòng tiền để nhận ra nạn nhân"
+  ],
+  "notes": [],
+  "nodes": [
+    {
+      "id": "s1",
+      "type": "start",
+      "label": "",
+      "explain": "",
+      "step": 0,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "",
+      "badge": ""
+    },
+    {
+      "id": "p2",
+      "type": "process",
+      "label": "Mồi nhử",
+      "explain": "Kẻ gian tiếp cận qua quảng cáo vé máy bay giá rẻ, hoặc giả cơ quan chức năng yêu cầu xác thực định danh.",
+      "step": 1,
+      "color": "#f4b47e",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "mail",
+      "badge": "vé máy bay rẻ"
+    },
+    {
+      "id": "p3",
+      "type": "process",
+      "label": "Nạn nhân cài ví, tự vay",
+      "explain": "Được hướng dẫn cài ví/app tài chính (bài nêu Home Credit, Viettel Money, MoMo), tự đăng ký vay.",
+      "step": 2,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "user",
+      "badge": ""
+    },
+    {
+      "id": "d4",
+      "type": "decision",
+      "label": "eKYC khuôn mặt đạt?",
+      "explain": "Đạt — vì chính chủ tự vay. eKYC không có lỗi nào để bắt.",
+      "step": 3,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "",
+      "badge": ""
+    },
+    {
+      "id": "p5",
+      "type": "process",
+      "label": "Giải ngân về ví chính chủ",
+      "explain": "",
+      "step": 4,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "check",
+      "badge": ""
+    },
+    {
+      "id": "p6",
+      "type": "process",
+      "label": "Chuyển hết cho kẻ lừa",
+      "explain": "Viện cớ 'xác minh giao dịch, nộp phí, hoàn tiền'. Nạn nhân chuyển toàn bộ tiền vay rồi bị cắt liên lạc.",
+      "step": 5,
+      "color": "#f4b47e",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "alert",
+      "badge": "10–60 phút"
+    },
+    {
+      "id": "d7",
+      "type": "decision",
+      "label": "Luật: chuyển ≥80% trong 1h?",
+      "explain": "Luật dòng tiền gắn cờ — nhưng coi đây là KẺ GIAN. Đo trên dữ liệu: gắn cờ 25.854 hồ sơ, coi 21/28 nạn nhân là kẻ gian.",
+      "step": 6,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "",
+      "badge": ""
+    },
+    {
+      "id": "p8",
+      "type": "process",
+      "label": "Tin báo + tin tự kể",
+      "explain": "Người khác đã báo tài khoản nhận này; chính nạn nhân kể lại vào Lá chắn ('tôi vừa vay rồi chuyển cho…').",
+      "step": 7,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "mail",
+      "badge": ""
+    },
+    {
+      "id": "d9",
+      "type": "decision",
+      "label": "AI: kẻ gian hay nạn nhân?",
+      "explain": "Hồ sơ sạch + tín hiệu kỹ thuật bình thường + chuyển hết cho tài khoản đã bị báo + có tin tự kể bị lừa + nhiều người vừa vay cùng chuyển về 1 tài khoản → NẠN NHÂN của cùng 1 đường dây.",
+      "step": 8,
+      "color": "#cdb8ec",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "",
+      "badge": ""
+    },
+    {
+      "id": "p10",
+      "type": "process",
+      "label": "Hỗ trợ nạn nhân",
+      "explain": "Không đưa vào danh sách đen. Liên hệ hỗ trợ, tư vấn trình báo công an, cảnh báo khách khác.",
+      "step": 9,
+      "color": "#b8e0c2",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "check",
+      "badge": ""
+    },
+    {
+      "id": "p11",
+      "type": "process",
+      "label": "Phong toả tài khoản lừa",
+      "explain": "Đề nghị ngân hàng phong toả 3 tài khoản nhận; tài khoản này đã nhận tiền từ 8 người vừa vay.",
+      "step": 9,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "lock",
+      "badge": ""
+    },
+    {
+      "id": "e12",
+      "type": "end",
+      "label": "",
+      "explain": "",
+      "step": 10,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "",
+      "badge": ""
+    }
+  ],
+  "edges": [
+    {
+      "source": "s1",
+      "target": "p2",
+      "label": ""
+    },
+    {
+      "source": "p2",
+      "target": "p3",
+      "label": ""
+    },
+    {
+      "source": "p3",
+      "target": "d4",
+      "label": ""
+    },
+    {
+      "source": "d4",
+      "target": "p5",
+      "label": "đạt"
+    },
+    {
+      "source": "p5",
+      "target": "p6",
+      "label": ""
+    },
+    {
+      "source": "p6",
+      "target": "d7",
+      "label": ""
+    },
+    {
+      "source": "d7",
+      "target": "p8",
+      "label": "gắn cờ: 'kẻ gian' ✗"
+    },
+    {
+      "source": "p8",
+      "target": "d9",
+      "label": ""
+    },
+    {
+      "source": "d9",
+      "target": "p10",
+      "label": "nạn nhân"
+    },
+    {
+      "source": "d9",
+      "target": "p11",
+      "label": "đường dây"
+    },
+    {
+      "source": "p10",
+      "target": "e12",
+      "label": ""
+    },
+    {
+      "source": "p11",
+      "target": "e12",
+      "label": ""
+    }
+  ],
+  "steps": [
+    {
+      "n": 1,
+      "title": "Mồi nhử",
+      "body": "Quảng cáo vé máy bay rẻ, hoặc giả cơ quan chức năng.",
+      "note": "",
+      "note_type": "info",
+      "badge": "CA THẬT"
+    },
+    {
+      "n": 2,
+      "title": "Nạn nhân tự vay",
+      "body": "Kẻ gian không cần chiếm ví — nạn nhân tự làm mọi bước.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 3,
+      "title": "eKYC đạt",
+      "body": "Chính chủ tự vay thì eKYC luôn đạt.",
+      "note": "Không công cụ eKYC nào chặn được bước này.",
+      "note_type": "warn",
+      "badge": ""
+    },
+    {
+      "n": 4,
+      "title": "Giải ngân",
+      "body": "Tiền về ví chính chủ của nạn nhân.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 5,
+      "title": "Chuyển hết",
+      "body": "Ca ngày 03/11/2026 ở An Giang: mất 120 triệu, vẫn phải tự trả nợ.",
+      "note": "",
+      "note_type": "info",
+      "badge": "THIỆT HẠI"
+    },
+    {
+      "n": 6,
+      "title": "Luật dòng tiền",
+      "body": "Có gắn cờ — nhưng gắn nhầm vai: nạn nhân thành kẻ gian, cùng hơn 26 nghìn hồ sơ khác.",
+      "note": "",
+      "note_type": "warn",
+      "badge": "VẤN ĐỀ"
+    },
+    {
+      "n": 7,
+      "title": "Tin báo",
+      "body": "Tài khoản nhận đã bị người khác báo; nạn nhân tự kể lại vào Lá chắn.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 8,
+      "title": "AI ghép tín hiệu",
+      "body": "Nhiều hồ sơ sạch cùng dồn tiền về 1 tài khoản bị báo → đây là nạn nhân của 1 đường dây.",
+      "note": "",
+      "note_type": "info",
+      "badge": "AI"
+    },
+    {
+      "n": 9,
+      "title": "Hành động kép",
+      "body": "Hỗ trợ nạn nhân + đề nghị phong toả tài khoản lừa, chặn người tiếp theo.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 10,
+      "title": "Nguồn",
+      "body": "Công an tỉnh An Giang, 'Cảnh báo thủ đoạn lừa đảo dụ dỗ vay tiền qua ứng dụng tài chính trực tuyến', 09/11/2026.",
+      "note": "https://congan.angiang.gov.vn/canh-bao-thu-doan-lua-dao-du-do-vay-tien-qua-ung-dung-tai-chinh-truc-tuyen",
+      "note_type": "info",
+      "badge": ""
+    }
+  ],
+  "arrows": [],
+  "groups": []
+}

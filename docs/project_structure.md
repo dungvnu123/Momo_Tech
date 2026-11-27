@@ -2,6 +2,13 @@
 
 ```text
 app/
+├── backend/
+│   ├── http/         # shield, transfer, alerts, live, metrics và helper chung
+│   ├── integration.py # đổi hợp đồng web sang AIService và InvestigationAgent
+│   ├── agent_tools.py # tool giới hạn theo thời điểm cảnh báo, che định danh
+│   ├── store.py      # truy vấn dữ liệu nghiệp vụ của backend
+│   ├── mock_ai.py    # chỉ dùng dựng dữ liệu/kết quả mẫu offline
+│   └── routes.py     # đăng ký API, static web và Feature Flow
 ├── ai/
 │   ├── shield/       # schemas.py, service.py, prompt.md, indicators.py
 │   ├── entities/     # schemas.py, service.py, prompt.md, candidates.py

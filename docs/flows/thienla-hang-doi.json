@@ -1,0 +1,285 @@
+{
+  "id": "thienla-hang-doi",
+  "title": "Đội rủi ro dùng hàng đợi điều tra",
+  "kind": "flow",
+  "look": "flat",
+  "visibility": "private",
+  "doc_md": "",
+  "group": "Thiên La",
+  "subtitle": "Từ 345 cảnh báo tới quyết định: lọc → chọn → xem đồ thị → xem dòng thời gian hồ sơ → điều tra → hành động.",
+  "duration": "2 phút",
+  "level": "Hướng dẫn",
+  "learn": [
+    "Bắt đầu từ mức Khẩn + có hồ sơ đang chờ giải ngân",
+    "Dòng thời gian hồ sơ cho thấy đúng thứ tự sự việc",
+    "Quyết định cuối luôn là của con người"
+  ],
+  "notes": [],
+  "nodes": [
+    {
+      "id": "s1",
+      "type": "start",
+      "label": "",
+      "explain": "",
+      "step": 0,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "",
+      "badge": ""
+    },
+    {
+      "id": "p2",
+      "type": "process",
+      "label": "Lọc",
+      "explain": "Biểu đồ theo ngày + khung giờ (đêm 0–6h đáng xem), mức Khẩn/Cao/Trung bình, loại (cụm / giao dịch giữ), kết luận, độ tin cậy ≥, tìm mã. Sắp xếp: ưu tiên, mới nhất, tin cậy, quy mô.",
+      "step": 1,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "gear",
+      "badge": ""
+    },
+    {
+      "id": "p3",
+      "type": "process",
+      "label": "Chọn cảnh báo",
+      "explain": "Mỗi dòng: giờ, mức, tiêu đề, thanh độ tin cậy, số hồ sơ đang chờ, số tin báo, kết luận đã điều tra sẵn.",
+      "step": 2,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "alert",
+      "badge": ""
+    },
+    {
+      "id": "p4",
+      "type": "process",
+      "label": "Đồ thị cụm",
+      "explain": "Hồ sơ + điểm dùng chung (thiết bị, tham chiếu, nơi nhận tiền, dải IP/lô SIM). Viền vàng = đang chờ giải ngân. Diễn biến cụm theo thời gian ở trên.",
+      "step": 3,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "chart",
+      "badge": ""
+    },
+    {
+      "id": "p5",
+      "type": "process",
+      "label": "Dòng thời gian hồ sơ",
+      "explain": "Bấm 1 hồ sơ: nộp → eKYC từng lần → duyệt → giải ngân → từng lần chuyển (cờ SIMO, ngoài danh bạ) → đến hạn/trả → tin báo → cảnh báo, kèm 'quá hạn N ngày' TẠI lúc cảnh báo.",
+      "step": 4,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "file",
+      "badge": ""
+    },
+    {
+      "id": "p6",
+      "type": "process",
+      "label": "Điều tra",
+      "explain": "Agent chạy từng bước, chỉ thấy dữ liệu tới lúc cảnh báo; ra kết luận: đường dây / nạn nhân / vô hại / chưa đủ căn cứ.",
+      "step": 5,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "api",
+      "badge": ""
+    },
+    {
+      "id": "d7",
+      "type": "decision",
+      "label": "Con người quyết định",
+      "explain": "",
+      "step": 6,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "",
+      "badge": ""
+    },
+    {
+      "id": "p8",
+      "type": "process",
+      "label": "Chặn + phong toả",
+      "explain": "Dừng giải ngân hồ sơ đang chờ, đề nghị phong toả tài khoản gom, theo dõi thiết bị/SĐT.",
+      "step": 7,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "lock",
+      "badge": ""
+    },
+    {
+      "id": "p9",
+      "type": "process",
+      "label": "Hỗ trợ nạn nhân",
+      "explain": "Liên hệ, tư vấn trình báo, KHÔNG đưa vào danh sách đen.",
+      "step": 7,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "user",
+      "badge": ""
+    },
+    {
+      "id": "p10",
+      "type": "process",
+      "label": "Đóng, ghi nhãn",
+      "explain": "Vô hại → ghi nhãn để đo lại độ chính xác hằng tuần.",
+      "step": 7,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "check",
+      "badge": ""
+    },
+    {
+      "id": "e11",
+      "type": "end",
+      "label": "",
+      "explain": "",
+      "step": 8,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "",
+      "badge": ""
+    }
+  ],
+  "edges": [
+    {
+      "source": "s1",
+      "target": "p2",
+      "label": ""
+    },
+    {
+      "source": "p2",
+      "target": "p3",
+      "label": ""
+    },
+    {
+      "source": "p3",
+      "target": "p4",
+      "label": ""
+    },
+    {
+      "source": "p4",
+      "target": "p5",
+      "label": ""
+    },
+    {
+      "source": "p5",
+      "target": "p6",
+      "label": ""
+    },
+    {
+      "source": "p6",
+      "target": "d7",
+      "label": ""
+    },
+    {
+      "source": "d7",
+      "target": "p8",
+      "label": "đường dây"
+    },
+    {
+      "source": "d7",
+      "target": "p9",
+      "label": "nạn nhân"
+    },
+    {
+      "source": "d7",
+      "target": "p10",
+      "label": "vô hại"
+    },
+    {
+      "source": "p8",
+      "target": "e11",
+      "label": ""
+    },
+    {
+      "source": "p9",
+      "target": "e11",
+      "label": ""
+    },
+    {
+      "source": "p10",
+      "target": "e11",
+      "label": ""
+    }
+  ],
+  "steps": [
+    {
+      "n": 1,
+      "title": "Lọc",
+      "body": "Mặc định: mỗi cụm 1 dòng, sắp theo ưu tiên.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 2,
+      "title": "Chọn",
+      "body": "Ưu tiên cảnh báo Khẩn có hồ sơ đang chờ — còn chặn kịp tiền.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 3,
+      "title": "Đồ thị",
+      "body": "Bấm đúp nền hoặc ⤢ Vừa khung để căn lại.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 4,
+      "title": "Dòng thời gian",
+      "body": "Xem đúng thứ tự: vay xong mấy phút thì tiền đi đâu.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 5,
+      "title": "Điều tra",
+      "body": "Cảnh báo dựng sẵn dùng luật mô phỏng. Khi bấm Điều tra, backend/integration.py gọi Agent và Gemini thật.",
+      "note": "Mốc bản giả lập: 57/58 kẻ gian, 0 nạn nhân bị nhầm, nhưng nhầm 298 hồ sơ vô hại — AI phải cắt phần này.",
+      "note_type": "warn",
+      "badge": ""
+    },
+    {
+      "n": 6,
+      "title": "Quyết định",
+      "body": "Agent chỉ đề xuất, không có quyền hành động thật.",
+      "note": "",
+      "note_type": "info",
+      "badge": "NGUYÊN TẮC"
+    },
+    {
+      "n": 7,
+      "title": "Hành động + nhãn",
+      "body": "Mỗi quyết định thành nhãn để đo lại precision/recall.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    }
+  ],
+  "arrows": [],
+  "groups": []
+}
