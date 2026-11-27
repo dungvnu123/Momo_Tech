@@ -88,6 +88,15 @@ class BackendIntegrationTests(unittest.TestCase):
         self.assertEqual(response.json()["times_reported"], 2)
         self.assertEqual(model.offered_tools[0], ["report_verdict"])
 
+    def test_shield_samples_load_without_calling_the_model(self):
+        model = ScriptedClient()
+        response = self.client(model).get("/api/shield/samples")
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(len(response.json()), 1)
+        self.assertEqual(response.json()[0]["text"], "PRIVATE REPORT")
+        self.assertTrue(response.json()[0]["label"])
+        self.assertEqual(model.history, [])
+
     def test_transfer_uses_real_service_and_maps_context(self):
         model = ScriptedClient(turn("transfer", "transfer_verdict", {
             "decision": "warn", "confidence": 0.8, "reasons": ["New recipient"], "advice": "Check recipient"}))
