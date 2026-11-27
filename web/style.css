@@ -118,6 +118,22 @@ textarea:focus { outline: none; border-color: var(--pink-2); }
 .dpd { font-weight: 700; padding: 2px 10px; border-radius: 999px; font-size: 12px; }
 .dpd.ok { background: var(--green-soft); color: var(--green); } .dpd.bad { background: var(--red-soft); color: var(--red); }
 
+/* mô phỏng hoạt động */
+.sim { margin-bottom: 18px; padding: 18px 22px; }
+.sim h2 small { font-weight: 500; font-size: 13px; }
+.sim-stats { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin: 8px 0; }
+.sim-stats div { background: #fbf5f8; border-radius: 12px; padding: 8px 10px; font-size: 12px; color: var(--muted); }
+.sim-stats b { display: block; font-size: 18px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.sim-stats .good b { color: var(--green); } .sim-stats .bad b { color: var(--red); }
+.sim-feed { list-style: none; margin: 0; padding: 0; max-height: 170px; overflow: auto; font-size: 13px; }
+.sim-feed li { display: flex; gap: 8px; align-items: baseline; padding: 4px 0; border-bottom: 1px dashed #f3e6ed; animation: in .35s ease; }
+.sim-feed time { color: var(--muted); font-variant-numeric: tabular-nums; }
+.sim-feed .k { font-size: 11px; color: var(--muted); }
+.dec { font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 999px; white-space: nowrap; }
+.dec.allow { background: var(--green-soft); color: var(--green); } .dec.warn, .dec.cancelled { background: var(--amber-soft); color: var(--amber); }
+.dec.hold, .dec.error { background: var(--red-soft); color: var(--red); } .dec.loan { background: #efe8f7; color: #7b5ea7; }
+@media (max-width: 900px) { .sim-stats { grid-template-columns: repeat(3, 1fr); } }
+
 /* hàng đợi */
 .toolbar { margin-bottom: 18px; padding: 18px 22px; }
 .tb-row { display: flex; justify-content: space-between; align-items: start; gap: 16px; flex-wrap: wrap; }

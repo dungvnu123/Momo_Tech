@@ -22,7 +22,8 @@ def main():
     if args.command == "build":
         result = build_graph(args.data_dir, args.database, replace=args.replace)
     else:
-        if not args.database.is_file():
+        from app import db
+        if not db.exists(args.database):
             parser.error("Database does not exist; run build first")
         with GraphStore(args.database) as store:
             graph = store.neighborhood(args.node_id, depth=args.depth)

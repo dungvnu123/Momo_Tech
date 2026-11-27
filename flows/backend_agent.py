@@ -18,7 +18,7 @@ def backend_agent_pipeline():
     )
     start = f.start("Bắt đầu")
     data = f.process("Dữ liệu và cảnh báo có sẵn", step=1, icon="database", badge="backend",
-        explain="Demo: gen_data.py sinh CSV; build.py chạy Engine theo thời gian và ghi thienla.db. "
+        explain="Demo: gen_data.py sinh CSV; build.py chạy Engine theo thời gian và ghi PostgreSQL (schema public). "
                 "Engine + mock_ai.py dựng cảnh báo/kết luận mẫu bằng luật, không gọi LLM. "
                 "Đây là dữ liệu mô phỏng; chưa có kết nối thật tới ngân hàng, ví hay SIMO.")
     request = f.process("Bấm Điều tra", step=2, icon="laptop", badge="EventSource",

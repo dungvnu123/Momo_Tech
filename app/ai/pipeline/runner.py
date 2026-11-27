@@ -45,7 +45,8 @@ class PipelineService:
         if self.lock.locked():
             raise PipelineBusyError("A pipeline run is already active")
         self.client.ensure_ready()
-        if not self.backend_database or not self.backend_database.is_file():
+        from app import db
+        if not self.backend_database or not db.exists(self.backend_database):
             raise FileNotFoundError("Backend database is unavailable")
         async with self.lock:
             run_id = uuid4().hex

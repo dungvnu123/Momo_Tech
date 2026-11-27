@@ -1,7 +1,7 @@
 # Phần AI của Thiên La
 
 Các chức năng AI đã tách trong `app/ai/`, dùng chung client Gemini, output
-tool schema, validation và cache SQLite. Không cần tạo thêm agent điều phối
+tool schema, validation và cache PostgreSQL (schema `ai_cache`). Không cần tạo thêm agent điều phối
 cho từng chức năng; Agent Thám tử vẫn kế thừa BaseAgent.
 
 | Module | Nhiệm vụ |
@@ -60,7 +60,7 @@ Ví dụ `data/groups.json` do tầng dữ liệu/backend cung cấp:
 ]
 ```
 
-Tính thống kê cụm từ dữ liệu thật trong SQLite, gồm thời gian, SIM/VPN/eKYC,
+Tính thống kê cụm từ dữ liệu thật trong PostgreSQL, gồm thời gian, SIM/VPN/eKYC,
 độ tập trung thiết bị/tham chiếu, tiền đi nhanh, người nhận chung, tin báo và
 quá hạn. Phần này không tự tạo cộng đồng/cụm từ toàn bộ graph. Không có eKYC
 thì ghi thiếu dữ liệu; chưa phân tích đủ tin báo thì ghi rõ tỷ lệ phủ.

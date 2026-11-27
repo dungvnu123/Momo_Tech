@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ví FinVay (demo)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="vi.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23A50064'/%3E%3Ctext x='16' y='22' font-size='16' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='700'%3EV%3C/text%3E%3C/svg%3E">
+</head>
+<body>
+<p class="demo-note">Ứng dụng ví <b>mô phỏng</b> cho bản thi Thiên La — dữ liệu giả, thương hiệu “FinVay” hư cấu. <a href="../">← Màn đội rủi ro</a></p>
+<div class="phone">
+  <!-- ĐĂNG NHẬP -->
+  <section id="s-login" class="screen on">
+    <div class="brand-big"><span>V</span><b>Ví FinVay</b><small>Khách hàng demo</small></div>
+    <form id="login-form" class="card">
+      <label>Số điện thoại<input id="l-phone" inputmode="numeric" maxlength="10" placeholder="09xxxxxxxx" required></label>
+      <label>Mã PIN (6 số)<input id="l-pin" type="password" inputmode="numeric" maxlength="6" placeholder="••••••" required autocomplete="current-password"></label>
+      <p id="l-err" class="err" hidden></p>
+      <button class="btn" type="submit">Đăng nhập</button>
+      <p class="muted small">Tài khoản demo: <span id="demo-phones">xem README hoặc hỏi người dựng</span></p>
+    </form>
+  </section>
+
+  <!-- TRANG CHỦ -->
+  <section id="s-home" class="screen">
+    <header class="top"><div><small>Xin chào</small><b id="h-name"></b></div><button id="logout" class="link">Đăng xuất</button></header>
+    <div class="balance"><small>Số dư ví</small><b id="h-balance"></b><span id="h-phone"></span></div>
+    <div class="actions">
+      <button data-go="transfer"><i>↗</i>Chuyển tiền</button>
+      <button data-go="loan"><i>＋</i>Vay nhanh</button>
+      <button data-go="inbox"><i>✉</i>Hộp tin<em id="h-unread" hidden></em></button>
+      <button data-go="history"><i>≡</i>Lịch sử</button>
+    </div>
+    <div class="card" id="h-loan"></div>
+  </section>
+
+  <!-- HỘP TIN -->
+  <section id="s-inbox" class="screen">
+    <header class="bar"><button class="back" data-go="home">‹</button><b>Hộp tin</b></header>
+    <div id="inbox" class="list"></div>
+  </section>
+  <section id="s-msg" class="screen">
+    <header class="bar"><button class="back" data-go="inbox">‹</button><b id="m-sender"></b></header>
+    <div class="card"><small id="m-ts" class="muted"></small><p id="m-body" class="msg-body"></p></div>
+    <div id="m-result"></div>
+    <div class="row2">
+      <button id="m-report" class="btn danger">⚑ Báo lừa đảo</button>
+      <button id="m-follow" class="btn ghost" title="Đóng vai nạn nhân: điền sẵn form chuyển tiền theo đúng tin nhắn">Làm theo hướng dẫn</button>
+    </div>
+  </section>
+
+  <!-- VAY -->
+  <section id="s-loan" class="screen">
+    <header class="bar"><button class="back" data-go="home">‹</button><b>Vay nhanh (demo)</b></header>
+    <form id="loan-form" class="card">
+      <p class="muted small">Mô phỏng một khoản vay vừa giải ngân về ví — để thử kịch bản “vay rồi bị dụ chuyển đi”.</p>
+      <label>Số tiền vay<input id="loan-amt" inputmode="numeric" required></label>
+      <button class="btn" type="submit">Nhận giải ngân</button>
+    </form>
+  </section>
+
+  <!-- CHUYỂN TIỀN -->
+  <section id="s-transfer" class="screen">
+    <header class="bar"><button class="back" data-go="home">‹</button><b>Chuyển tiền</b></header>
+    <form id="tx-form" class="card">
+      <div class="seg"><label><input type="radio" name="to_type" value="bank" checked> Ngân hàng</label><label><input type="radio" name="to_type" value="momo_wallet"> Ví</label></div>
+      <label>Số tài khoản / số ví<input id="tx-id" inputmode="numeric" maxlength="19" required></label>
+      <button class="btn ghost" type="button" id="tx-look">Kiểm tra người nhận</button><div id="tx-look-r"></div>
+      <label>Ngân hàng<input id="tx-bank" maxlength="20" placeholder="VCB, TCB, ACB…"></label>
+      <label>Tên người nhận<input id="tx-name" maxlength="60" required></label>
+      <label>Số tiền<input id="tx-amt" inputmode="numeric" required></label>
+      <label>Nội dung<input id="tx-note" maxlength="120"></label>
+      <label class="chk"><input id="tx-save" type="checkbox"> Lưu người nhận vào danh bạ</label>
+      <button class="btn" type="submit">Chuyển</button>
+    </form>
+  </section>
+  <section id="s-result" class="screen">
+    <div id="r-box"></div>
+  </section>
+
+  <!-- LỊCH SỬ -->
+  <section id="s-history" class="screen">
+    <header class="bar"><button class="back" data-go="home">‹</button><b>Lịch sử chuyển tiền</b></header>
+    <div id="history" class="list"></div>
+  </section>
+</div>
+<script src="vi.js"></script>
+</body>
+</html>

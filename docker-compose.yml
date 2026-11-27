@@ -1,0 +1,44 @@
+# path: docker-compose.yml
+# Hạ tầng Thiên La: Postgres + web app.
+#   docker compose up -d db                       # chỉ DB (dev: chạy app bằng uv trên máy)
+#   docker compose --profile app up -d --build    # DB + app trong container
+# Biến môi trường lấy từ .env (KHÔNG commit) — mẫu ở .env.example.
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: thienla
+      POSTGRES_USER: thienla
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?đặt POSTGRES_PASSWORD trong .env}
+    ports:
+      - "127.0.0.1:${DB_PORT:-5433}:5432"     # chỉ mở cho máy mình, không ra mạng ngoài
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U thienla -d thienla"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  app:
+    profiles: ["app"]
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://thienla:${POSTGRES_PASSWORD}@db:5432/thienla
+      THIENLA_PASSWORD: ${THIENLA_PASSWORD:-}
+      THIENLA_SECRET: ${THIENLA_SECRET:-}
+      THIENLA_BEHIND_PROXY: ${THIENLA_BEHIND_PROXY:-}
+      DEMO_AUTOFILL: ${DEMO_AUTOFILL:-}
+      DEMO_PIN: ${DEMO_PIN:-}
+      SIM_AUTOSTART: ${SIM_AUTOSTART:-}
+      SIM_INTERVAL: ${SIM_INTERVAL:-3}
+    ports:
+      - "127.0.0.1:${APP_PORT:-4420}:4420"
+
+volumes:
+  pgdata:

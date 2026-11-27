@@ -54,7 +54,7 @@ class ReportStore:
             return 0
         return self.connection.execute(
             "SELECT COUNT(*) FROM edges e JOIN ai_report_analysis a ON a.id=e.source_id "
-            "WHERE e.target=? AND e.kind='REPORTED_BY' AND json_extract(a.payload, '$.reporter_is_victim')=1",
+            "WHERE e.target=? AND e.kind='REPORTED_BY' AND (a.payload::jsonb->>'reporter_is_victim')::boolean",
             (wallet,),
         ).fetchone()[0]
 

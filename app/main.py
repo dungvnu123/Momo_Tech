@@ -61,7 +61,8 @@ def create_app(llm_client: LLMClient | None = None, *, tool_llm_client=None,
     database = Path(backend_database or os.environ.get("THIENLA_DB", "thienla.db"))
     if backend_database is False:
         return application
-    if database.is_file():
+    from app import db
+    if db.exists(database):   # PostgreSQL: schema của "database" kiểu cũ đã có dữ liệu (build.py)
         from app.backend.routes import mount_backend
         mount_backend(application, database)
     elif backend_database is not None:

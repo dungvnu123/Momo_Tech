@@ -43,7 +43,7 @@ giới hạn API thông thường, không tiêu lượt chạy.
 
 ## Từng bước xử lý
 
-1. Đọc SQLite backend bằng kết nối chỉ đọc trong một transaction. Xuất ba CSV
+1. Đọc PostgreSQL backend (schema `public`) bằng kết nối chỉ đọc trong một transaction. Xuất ba CSV
    nguồn: apps, transfers, reports; loại cột `signals` và `analysis` dựng mẫu.
    Không đọc `cases`, verdict, confidence hay ground_truth để chọn mẫu cho AI.
 2. Chọn cụm từ các cảnh báo latest còn trong backend: ưu tiên hai đầu hàng đợi
@@ -51,7 +51,7 @@ giới hạn API thông thường, không tiêu lượt chạy.
    Có thể chỉ định `cluster_ids` từ danh sách hợp lệ thay cho lựa chọn mặc định.
 3. Ưu tiên tin báo cùng người báo hoặc có chuỗi số liên quan nơi nhận của cụm.
    Đây chỉ là blocking sơ bộ trên văn bản; AI mới phân tích và trích đoạn nguồn.
-4. Dựng SQLite graph mới trong thư mục phiên. Phân tích từng tin bằng AIService,
+4. Dựng graph PostgreSQL mới trong thư mục phiên. Phân tích từng tin bằng AIService,
    kiểm tra dấu vết có thật trong nguồn, lưu ai_report_analysis và cạnh MENTIONS.
    Lỗi một tin được ghi riêng; không dựng kết quả safe hoặc độ phủ đầy đủ giả.
 5. Tạo cặp thực thể có giới hạn trong các cụm đã chọn. AI phân biệt same,

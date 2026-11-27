@@ -1,7 +1,7 @@
 import asyncio
 import csv
 import json
-import sqlite3
+from app import db as pgdb
 import unittest
 
 from pydantic import ValidationError
@@ -178,7 +178,7 @@ class ClusterAssessmentTests(unittest.TestCase):
         self.assertEqual([r["report_id"] for r in data["reports"]], ["R1"])
         self.assertEqual(data["coverage"]["as_of"], "2026-11-01T09:00:00")
         self.assertFalse(tools.call("cluster_money_flow", {"app_ids": ["A", "A"]})["ok"])
-        with sqlite3.connect(fixture.database) as db:
+        with pgdb.connect(fixture.database) as db:
             db.execute("UPDATE apps SET full_name=''")
             db.execute("UPDATE transfers SET to_name=''")
         unknown = tools.call("cluster_money_flow", {})["data"]

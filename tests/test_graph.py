@@ -1,5 +1,5 @@
 import csv
-import sqlite3
+from app import db as pgdb
 import tempfile
 import unittest
 from pathlib import Path
@@ -150,7 +150,7 @@ class GraphTests(unittest.TestCase):
 
     def test_duplicate_source_id_is_rejected_atomically(self):
         self.applications[1]["app_id"] = "A"
-        with self.assertRaises(sqlite3.IntegrityError):
+        with self.assertRaises(pgdb.IntegrityError):
             self.build()
         with GraphStore(self.database) as store:
             self.assertEqual(store.stats()["nodes"], 0)

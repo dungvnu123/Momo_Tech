@@ -11,7 +11,7 @@ Hai adapter phục vụ hai nguồn:
 
 | Nguồn | Module | Phạm vi thời gian |
 |---|---|---|
-| Graph SQLite | `app/tools/handlers/cluster_money.py` | Snapshot graph đang đọc |
+| Graph PostgreSQL | `app/tools/handlers/cluster_money.py` | Snapshot graph đang đọc |
 | Backend | `app/backend/evidence/cluster_money.py` | Chỉ dữ liệu tới `alert.ts` |
 
 GraphTools nhận `cluster_money_flow(cluster_id=...)` hoặc

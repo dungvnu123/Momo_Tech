@@ -1,12 +1,15 @@
 data/
+data_seed*/
 __pycache__/
 *.pyc
 .env
 .venv/
 *.db
+*.db-wal
+*.db-shm
 ~$*
 .tools/
 .uv-cache/
-
-*.db-wal
-*.db-shm
+# HDSD đã điền tài khoản dùng thử — không commit
+docs/hdsd/HDSD_Thien_La.*
+docs/hdsd/_HDSD_filled.html

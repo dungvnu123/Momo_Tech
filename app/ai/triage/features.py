@@ -37,7 +37,7 @@ def cluster_summary(store, cluster_id, app_ids):
                     recipients[edge["target"]].add(row["app_id"])
             if store.connection.execute(
                 "SELECT 1 FROM edges WHERE target=? AND kind='MENTIONS' "
-                "AND json_extract(payload, '$.verdict') IN ('scam', 'suspicious') LIMIT 1", (edge["target"],),
+                "AND payload::jsonb->>'verdict' IN ('scam', 'suspicious') LIMIT 1", (edge["target"],),
             ).fetchone():
                 reported.add(edge["target"])
         loan = int(row["amount"])

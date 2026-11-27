@@ -1,5 +1,5 @@
 import json
-import sqlite3
+from app import db as pgdb
 import unittest
 from pydantic import ValidationError
 
@@ -15,9 +15,9 @@ class InvestigationDecisionTests(unittest.TestCase):
         self.fixture = fixtures.BackendIntegrationTests()
         self.fixture.setUp()
         self.addCleanup(self.fixture.doCleanups)
-        with sqlite3.connect(self.fixture.database) as db:
-            db.execute("ALTER TABLE alerts ADD COLUMN kind")
-            db.execute("ALTER TABLE alerts ADD COLUMN transfer_id")
+        with pgdb.connect(self.fixture.database) as db:
+            db.execute("ALTER TABLE alerts ADD COLUMN kind TEXT")
+            db.execute("ALTER TABLE alerts ADD COLUMN transfer_id TEXT")
             db.execute("UPDATE alerts SET kind='transfer',transfer_id='CK00001'")
             db.execute("UPDATE transfers SET simo_flag='True',amount='639000' WHERE transfer_id='CK00001'")
 
@@ -75,7 +75,7 @@ class InvestigationDecisionTests(unittest.TestCase):
             tools.validate_case(validate_submission(submission("cluster"), [cluster]), [cluster])
 
     def test_hold_without_recorded_warning_is_rejected(self):
-        with sqlite3.connect(self.fixture.database) as db:
+        with pgdb.connect(self.fixture.database) as db:
             db.execute("UPDATE transfers SET simo_flag='False'")
             db.execute("DELETE FROM reports")
         tools, step = self.read()
@@ -84,7 +84,7 @@ class InvestigationDecisionTests(unittest.TestCase):
         tools.validate_case(validate_submission(self.case("review"), [step]), [step])
 
     def test_mock_number_only_report_matches_do_not_become_a_verified_warning(self):
-        with sqlite3.connect(self.fixture.database) as db:
+        with pgdb.connect(self.fixture.database) as db:
             db.execute("UPDATE transfers SET simo_flag='False'")
         tools, step = self.read()
         transaction = step.result["data"]["transfer"]
@@ -121,7 +121,7 @@ class InvestigationDecisionTests(unittest.TestCase):
         self.assertTrue(case["tool_steps"][3]["result"]["ok"])
 
     def test_reports_are_joined_for_all_transfers_even_same_name_or_late(self):
-        with sqlite3.connect(self.fixture.database) as db:
+        with pgdb.connect(self.fixture.database) as db:
             db.execute("UPDATE transfers SET to_name='PRIVATE NAME' WHERE transfer_id='CK00001'")
         tools, step = self.read()
         self.assertTrue(step.result["data"]["transfer"]["recipient_name_matches_applicant"])
@@ -129,7 +129,7 @@ class InvestigationDecisionTests(unittest.TestCase):
         self.assertEqual(len(tools.call("reports_mentioning", {})["data"]["reports"]), 1)
 
     def test_bank_scope_and_pagination_do_not_mix_recipient_identities(self):
-        with sqlite3.connect(self.fixture.database) as db:
+        with pgdb.connect(self.fixture.database) as db:
             db.execute("INSERT INTO transfers SELECT 'CK00003',from_wallet,to_id,to_name,'BIDV',to_type,amount,"
                        "created_at,recipient_in_contacts,contact_saved_minutes_ago,prior_transfers_to_recipient,"
                        "simo_flag,to_wallet_age_days,note FROM transfers WHERE transfer_id='CK00001'")
@@ -157,7 +157,7 @@ class InvestigationDecisionTests(unittest.TestCase):
             CaseSubmission.model_validate(args)
 
     def test_empty_snapshot_is_an_execution_failure_not_an_uncertain_analysis(self):
-        with sqlite3.connect(self.fixture.database) as db:
+        with pgdb.connect(self.fixture.database) as db:
             db.execute("UPDATE apps SET applied_at='2026-12-01T00:00:00'")
         model = ScriptedClient()
         client = self.fixture.client(model)

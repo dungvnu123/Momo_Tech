@@ -1,6 +1,6 @@
 import csv
 import json
-import sqlite3
+from app import db as pgdb
 import tempfile
 import unittest
 from pathlib import Path
@@ -138,7 +138,7 @@ class GraphToolTests(unittest.TestCase):
 
     def test_store_read_only_connection_rejects_writes(self):
         with GraphStore(self.database, read_only=True) as store:
-            with self.assertRaises(sqlite3.OperationalError):
+            with self.assertRaises(pgdb.Error):
                 store.connection.execute("DELETE FROM nodes")
 
     def test_aliases_are_scoped_to_a_tool_instance(self):

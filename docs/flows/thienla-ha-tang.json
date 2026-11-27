@@ -1,0 +1,259 @@
+{
+  "id": "thienla-ha-tang",
+  "title": "Hạ tầng và bảo mật: một yêu cầu đi qua những lớp nào",
+  "kind": "flow",
+  "look": "iso",
+  "visibility": "private",
+  "doc_md": "",
+  "group": "Thiên La",
+  "subtitle": "Docker Compose: PostgreSQL 16 + web app FastAPI (user không phải root). Bí mật chỉ nằm trong .env.",
+  "duration": "kỹ thuật",
+  "level": "Chi tiết",
+  "learn": [
+    "2 loại phiên tách biệt: đội rủi ro và khách",
+    "Giới hạn lượt gọi + header bảo mật ở 1 chỗ (middleware)",
+    "Chế độ demo bật/tắt bằng cờ, không sửa code"
+  ],
+  "notes": [],
+  "nodes": [
+    {
+      "id": "s1",
+      "type": "start",
+      "label": "",
+      "explain": "",
+      "step": 0,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "",
+      "badge": ""
+    },
+    {
+      "id": "p2",
+      "type": "process",
+      "label": "Trình duyệt",
+      "explain": "Màn đội rủi ro (/), app ví khách (/vi/), luồng trình chiếu (/flows/).",
+      "step": 1,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "laptop",
+      "badge": ""
+    },
+    {
+      "id": "p3",
+      "type": "process",
+      "label": "Caddy (HTTPS)",
+      "explain": "Reverse proxy + chứng chỉ tự động khi lên VPS; THIENLA_BEHIND_PROXY=1 để lấy IP thật + cookie Secure.",
+      "step": 2,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "balancer",
+      "badge": ""
+    },
+    {
+      "id": "p4",
+      "type": "process",
+      "label": "Middleware bảo mật",
+      "explain": "Giới hạn lượt theo IP (đăng nhập 5/phút…) · chặn API cần đăng nhập · CSP, X-Frame-Options, nosniff, no-referrer · no-store cho API.",
+      "step": 3,
+      "color": "#f4b47e",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "lock",
+      "badge": "security.guard"
+    },
+    {
+      "id": "d5",
+      "type": "decision",
+      "label": "Loại phiên?",
+      "explain": "Cookie ký HMAC-SHA256, HttpOnly, SameSite=Strict. Đội rủi ro: mật khẩu (8 giờ). Khách: SĐT + PIN băm scrypt (2 giờ).",
+      "step": 4,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "",
+      "badge": ""
+    },
+    {
+      "id": "p6",
+      "type": "process",
+      "label": "API đội rủi ro",
+      "explain": "Hàng đợi, đồ thị, hồ sơ (đã tối thiểu hoá PII), điều tra, phát realtime, mô phỏng.",
+      "step": 5,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "api",
+      "badge": ""
+    },
+    {
+      "id": "p7",
+      "type": "process",
+      "label": "API khách",
+      "explain": "Chỉ dữ liệu của chính SĐT đang đăng nhập; cùng 1 thông báo cho sai SĐT và sai PIN.",
+      "step": 5,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "user",
+      "badge": ""
+    },
+    {
+      "id": "p8",
+      "type": "process",
+      "label": "Công khai",
+      "explain": "Lá chắn, tổng quan, chỉ số tổng hợp — không có dữ liệu cá nhân.",
+      "step": 5,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "file",
+      "badge": ""
+    },
+    {
+      "id": "p9",
+      "type": "process",
+      "label": "PostgreSQL 16",
+      "explain": "Trong Docker, chỉ mở cho máy mình. build.py nạp ~1,3 triệu dòng bằng COPY; dữ liệu mô phỏng 100%.",
+      "step": 6,
+      "color": "#cdb8ec",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "database",
+      "badge": "127.0.0.1:5433"
+    },
+    {
+      "id": "e10",
+      "type": "end",
+      "label": "",
+      "explain": "",
+      "step": 7,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "",
+      "badge": ""
+    }
+  ],
+  "edges": [
+    {
+      "source": "s1",
+      "target": "p2",
+      "label": ""
+    },
+    {
+      "source": "p2",
+      "target": "p3",
+      "label": ""
+    },
+    {
+      "source": "p3",
+      "target": "p4",
+      "label": ""
+    },
+    {
+      "source": "p4",
+      "target": "d5",
+      "label": ""
+    },
+    {
+      "source": "d5",
+      "target": "p6",
+      "label": "đội rủi ro"
+    },
+    {
+      "source": "d5",
+      "target": "p7",
+      "label": "khách"
+    },
+    {
+      "source": "d5",
+      "target": "p8",
+      "label": "không cần"
+    },
+    {
+      "source": "p6",
+      "target": "p9",
+      "label": ""
+    },
+    {
+      "source": "p7",
+      "target": "p9",
+      "label": ""
+    },
+    {
+      "source": "p8",
+      "target": "p9",
+      "label": ""
+    },
+    {
+      "source": "p9",
+      "target": "e10",
+      "label": ""
+    }
+  ],
+  "steps": [
+    {
+      "n": 1,
+      "title": "Trình duyệt",
+      "body": "3 cửa vào cho 3 đối tượng.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 2,
+      "title": "HTTPS",
+      "body": "Bản thi chạy sau Caddy; chạy trên máy thì bỏ qua lớp này.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 3,
+      "title": "Middleware",
+      "body": "Mọi yêu cầu đều qua đây trước — 1 chỗ để rà soát.",
+      "note": "",
+      "note_type": "info",
+      "badge": "BẢO MẬT"
+    },
+    {
+      "n": 4,
+      "title": "Phiên",
+      "body": "Phiên khách không mở được API đội rủi ro và ngược lại.",
+      "note": "DEMO_AUTOFILL=1 trả mật khẩu/PIN cho trình duyệt để tự đăng nhập — chỉ bật khi trình diễn.",
+      "note_type": "warn",
+      "badge": ""
+    },
+    {
+      "n": 5,
+      "title": "Phân quyền",
+      "body": "Đã thử: khách gọi API đội rủi ro → 401; cookie giả → 401; PIN sai → 401.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 6,
+      "title": "Dữ liệu",
+      "body": "Đặt lại demo = chạy lại build.py (xoá sạch rồi dựng lại ~15 giây).",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    }
+  ],
+  "arrows": [],
+  "groups": []
+}

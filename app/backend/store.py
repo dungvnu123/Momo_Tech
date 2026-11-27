@@ -1,10 +1,11 @@
 # path: app/backend/store.py
-"""Tool CHỈ ĐỌC trên thienla.db — agent Thám tử (giả lập hay Claude) đều gọi qua đây.
+"""Tool trên PostgreSQL (schema public) — agent Thám tử (giả lập hay Gemini) đều gọi qua đây.
 Mọi CCCD/SĐT trả ra đều đã che bớt (mask)."""
 import json
-import sqlite3
 from collections import defaultdict
 from datetime import datetime
+
+from app import db
 
 from . import mock_ai as ai
 
@@ -15,15 +16,20 @@ def mask(s: str) -> str:
 
 
 class Tools:
-    def __init__(self, db_path):
-        self.db = sqlite3.connect(db_path, check_same_thread=False)
-        self.db.row_factory = sqlite3.Row
+    def __init__(self, database="thienla.db"):
+        # database: đường dẫn kiểu cũ (→ schema public) hoặc 1 db.Conn có sẵn. Tự commit: mỗi lệnh ghi là 1 giao dịch.
+        self.db = database if isinstance(database, db.Conn) else db.connect(database, autocommit=True)
 
     def q(self, sql, *p):
-        return [dict(r) for r in self.db.execute(sql, p)]
+        """Trả list[dict] (dict thật — FastAPI trả JSON đúng dạng object)."""
+        return [dict(r) for r in self.db.execute(sql, p).fetchall()]
+
+    def run(self, sql, *p):
+        """Ghi (chỉ dùng cho phần app khách + cảnh báo trực tiếp; tool của agent vẫn chỉ đọc)."""
+        return self.db.execute(sql, p)
 
     def apps(self, ids):
-        return self.q(f"SELECT * FROM apps WHERE app_id IN ({','.join('?' * len(ids))})", *ids)
+        return self.q("SELECT * FROM apps WHERE app_id = ANY(?)", list(ids)) if ids else []
 
     def alert(self, alert_id):
         """Ảnh chụp cụm tại lúc cảnh báo — đầu vào cho investigate()."""

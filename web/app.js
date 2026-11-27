@@ -14,6 +14,15 @@ const api = async (path, body, retried) => {
 let loginWait = null;
 function askLogin() {
   if (loginWait) return loginWait;
+  // Chế độ demo (DEMO_AUTOFILL): server trả sẵn mật khẩu → tự đăng nhập, không hiện hộp mật khẩu
+  loginWait = fetch("api/me").then((r) => r.json()).then(async (m) => {
+    if (!m.demo_password) return manualLogin();
+    await api("login", { password: m.demo_password }, true);
+    $("#logout").hidden = false; loginWait = null;
+  }).catch((e) => { loginWait = null; throw e; });
+  return loginWait;
+}
+function manualLogin() {
   const dlg = $("#login");
   loginWait = new Promise((resolve, reject) => {
     dlg.oncancel = () => { loginWait = null; reject(new Error("Cần đăng nhập để xem phần này")); };   // Esc = huỷ, không treo
@@ -166,6 +175,17 @@ async function net() {
   $("#investigate").onclick = () => runInvestigate(current);
   $("#live-btn").onclick = toggleLive;
   await loadAlerts(true);
+  simInit();
+  // cảnh báo phát sinh trực tiếp từ app khách → tự làm mới danh sách (khi đang mở màn này, không ở chế độ phát lại)
+  let lastTop = "";
+  setInterval(async () => {
+    if (liveES || !$("#net").classList.contains("on") || document.hidden) return;
+    try {
+      const r = await api("alerts?sort=time&limit=1&latest=false"), top = r.items[0]?.alert_id || "";
+      if (lastTop && top !== lastTop) { await loadAlerts(); $("#list-sub").textContent += " · có cảnh báo mới"; }
+      lastTop = top;
+    } catch {}
+  }, 15000);
 }
 function setDay(day) {
   F.day = day;
@@ -291,6 +311,33 @@ function showCase(c, cached) {
   document.querySelectorAll("[data-assessment-app]").forEach((button) => {
     button.onclick = () => openDossier(button.dataset.assessmentApp, c.as_of);
   });
+}
+
+// ── mô phỏng hoạt động trực tiếp ─────────────────────────────────────────────────────
+const DEC_VI = { allow: "cho phép", warn: "cảnh báo", hold: "tạm giữ", cancelled: "khách huỷ", loan: "vay", error: "lỗi" };
+let simHolds = -1;
+async function simRender(s) {
+  const st = s.stats || {}, n = (k) => num(st[k] || 0);
+  $("#sim-btn").textContent = s.running ? "⏸ Tắt mô phỏng" : "▶ Bật mô phỏng";
+  $("#sim-btn").classList.toggle("on", s.running);
+  $("#sim-stats").innerHTML = `<div>Khoản vay<b>${n("loans")}</b></div><div>Giao dịch<b>${n("transfers")}</b></div>
+    <div>Cho phép<b>${n("dec_allow")}</b></div><div>Cảnh báo / huỷ<b>${num((st.dec_warn || 0) + (st.dec_cancelled || 0))}</b></div>
+    <div class="good">Lừa bị chặn<b>${n("scam_blocked")}/${n("scam_total")}</b></div><div class="bad">Bình thường bị làm phiền<b>${n("benign_flagged")}</b></div>`;
+  $("#sim-feed").innerHTML = (s.recent || []).map((e) => `<li><time>${e.ts.slice(11, 19)}</time><span class="dec ${e.decision}">${DEC_VI[e.decision] || e.decision}</span>
+      <span>${esc(e.text)}${e.kind ? ` <span class="k">· kịch bản: ${esc(e.kind)}</span>` : ""}</span></li>`).join("");
+  if (simHolds >= 0 && (st.dec_hold || 0) !== simHolds && !liveES) loadAlerts();   // có giao dịch bị giữ → hàng đợi tải lại ngay
+  simHolds = st.dec_hold || 0;
+}
+function simInit() {
+  $("#sim-btn").onclick = async () => {
+    const s = await api("sim");
+    simRender(await api(s.running ? "sim/stop" : "sim/start", s.running ? {} : { interval: Number($("#sim-speed").value) }));
+  };
+  api("sim").then(simRender).catch(() => {});
+  setInterval(async () => {
+    if (!$("#net").classList.contains("on") || document.hidden) return;
+    try { simRender(await api("sim")); } catch {}
+  }, 2000);
 }
 
 // ── phát realtime ─────────────────────────────────────────────────────────────────

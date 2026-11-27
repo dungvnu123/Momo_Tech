@@ -52,15 +52,18 @@ flowchart LR
 | Thành phần | File | Vai trò |
 |---|---|---|
 | Sinh dữ liệu | `gen_data.py` | 7 bảng có mốc thời gian, cài sẵn đường dây + nhiễu; tự kiểm tra + baseline luật; `--seed` cho bộ chấm chéo |
-| Dựng sẵn | `build.py` | Nạp SQLite → cho bộ máy chạy qua **741.593 sự kiện** (~8 giây) → 347 cảnh báo → điều tra trước cảnh báo mới nhất của mỗi cụm |
+| Dựng sẵn | `build.py` | Nạp **PostgreSQL** (COPY hàng loạt, ~1,3 triệu dòng) → cho bộ máy chạy qua **741.593 sự kiện** (~8 giây) → 347 cảnh báo → điều tra trước cảnh báo mới nhất của mỗi cụm |
 | Bộ máy realtime | `app/engine.py` | Xử lý từng sự kiện, cập nhật dần đồ thị, sinh cảnh báo; không nhìn trước tương lai |
-| **AI thật** | `app/ai/`, `app/agents/investigation/`, `app/backend/integration.py` | Gemini qua schema; Agent kế thừa BaseAgent, gọi tool và kiểm chứng nguồn; không đọc đáp án |
-| Dựng mẫu offline | `app/backend/mock_ai.py` | Engine/build dùng luật để tạo cảnh báo và kết luận mẫu nhanh, ghi rõ mode=mock |
-| Tool chỉ đọc | `app/backend/agent_tools.py`, `app/backend/store.py`, `app/tools/` | Tool backend có mốc `as_of`; tool graph độc lập đọc SQLite graph |
-| Bảo mật | `app/security.py`, `app/middleware/web_security.py`, `app/backend/http/auth.py` | Đăng nhập, phiên ký HMAC, giới hạn lượt gọi theo app, header bảo mật; không gom SSE |
+| **AI** | `app/ai/`, `app/agents/investigation/`, `app/backend/integration.py` | Gemini qua schema; Agent kế thừa BaseAgent, gọi tool và kiểm chứng nguồn; không đọc đáp án. Chưa có key → tự rơi về bản luật |
+| Bản luật | `app/backend/mock_ai.py` | Build/engine/mô phỏng dùng luật để dựng cảnh báo, kết luận mẫu và kiểm tra chuyển tiền nhanh; ghi rõ `mode` |
+| Tool chỉ đọc | `app/backend/agent_tools.py`, `app/backend/store.py`, `app/tools/` | Tool backend có mốc `as_of`; tool graph đọc schema `graph`; dòng thời gian hồ sơ |
+| Bảo mật | `app/security.py`, `app/middleware/`, `app/backend/http/auth.py` | Đăng nhập đội rủi ro + phiên khách, phiên ký HMAC, PIN băm scrypt, giới hạn lượt gọi, header bảo mật |
+| **App ví khách** | `app/khach.py`, `web/vi/` | Khách đăng nhập SĐT + PIN: ví, khoản vay, hộp tin, báo lừa đảo, tra cứu người nhận, chuyển tiền — mỗi lần chuyển được chấm điểm 0–100, đối chiếu **đường dây đã điều tra** (`ring_accounts`), SIMO, tin báo; tạm giữ/báo lừa → cảnh báo vào hàng đợi ngay |
+| **Mô phỏng hoạt động** | `app/sim.py` | Tự sinh khoản vay + chuyển tiền ngẫu nhiên (bình thường / bị dụ vay / giả thu nợ / người thân nhờ gấp), đi qua đúng `execute_transfer` của app khách |
+| Hạ tầng | `docker-compose.yml`, `Dockerfile`, `app/db.py` | Postgres 16 (schema `public` / `graph` / `ai_cache`) + app trong container (user không phải root); `.env` chứa bí mật, không commit |
 | Web | `app/main.py`, `web/` | FastAPI + 1 trang HTML/JS thuần + Cytoscape; feature-flow gắn ở `/flows` |
 
-**Stack:** Python 3.12, FastAPI, SQLite (stdlib), Cytoscape.js (dùng bản đóng gói sẵn của feature-flow, không gọi CDN), font Be Vietnam Pro; quản lý môi trường bằng `uv`.
+**Stack:** Python 3.12, FastAPI, **PostgreSQL 16** (psycopg 3) trong Docker, Cytoscape.js (dùng bản đóng gói sẵn của feature-flow, không gọi CDN), font Be Vietnam Pro; quản lý môi trường bằng `uv`.
 
 ---
 
@@ -163,19 +166,42 @@ dùng vừa gửi vào kho chung chưa được nối đầy đủ. Chi tiết:
 | GET | `/api/alerts/{id}` · `/api/alerts/{id}/investigate` (SSE) | **Có** | Đồ thị con + diễn biến cụm; điều tra với `as_of` = lúc cảnh báo |
 | GET | `/api/apps/{id}?as_of=` | **Có** | Dòng thời gian hồ sơ + quá hạn tại `as_of` (đã tối thiểu hoá PII) |
 | GET | `/api/live?start=&day_seconds=` (SSE) | **Có** | Phát lại realtime |
+| POST | `/api/khach/login`, `/api/khach/logout` · GET `/api/khach/demo` | — | Phiên khách riêng (cookie `tl_khach`); `demo` chỉ trả SĐT demo, không bao giờ trả PIN |
+| GET | `/api/khach/me`, `/api/khach/inbox`, `/api/khach/transfers` | **Khách** | Chỉ dữ liệu của chính khách đang đăng nhập |
+| POST | `/api/khach/inbox/{id}/read`, `/api/khach/report/{id}` | **Khách** | Báo lừa: chỉ báo được tin trong hộp tin của mình → phân tích + ghi tin báo + cảnh báo `LV…` |
+| GET | `/api/sim` · POST `/api/sim/start {interval}`, `/api/sim/stop` | **Có** | Bộ mô phỏng hoạt động: trạng thái, bộ đếm, 15 sự kiện gần nhất; tự dừng sau 2.000 sự kiện |
+| POST | `/api/khach/loan`, `/api/khach/transfer` | **Khách** | Vay nhanh (≤ 20 triệu) · chuyển tiền: `allow` / `warn` (cần xác nhận lại) / `hold` (tiền không rời ví, sinh cảnh báo) |
 
 ---
 
 ## 7. Giao diện (`web/`)
 
-Tông hồng magenta, font Be Vietnam Pro, 1 trang 4 màn:
+Tông hồng magenta, font Be Vietnam Pro. **Màn đội rủi ro** (`/`) gồm 4 màn; **app ví khách** ở `/vi/`:
 
 | Màn | Nội dung |
 |---|---|
 | **Tổng quan** (công khai) | Phễu (sự kiện → hồ sơ có tín hiệu → cụm → cảnh báo → kết luận) · so với luật cố định · bảng **thời gian phát hiện** theo nhóm |
 | **Lá chắn** (công khai) | Dán tin hoặc chọn mẫu → đỏ/vàng/xanh, lý do, dấu vết, số người đã báo, lời khuyên |
 | **Chuyển tiền** | Giao dịch thật trong dữ liệu → Tạm giữ/Cảnh báo/Cho phép + khung thông báo trong app ví + ngữ cảnh người nhận |
-| **Lưới & Thám tử** | Biểu đồ cảnh báo **theo ngày** (có nhãn) + **dải 24 giờ** (lọc giờ hoặc khung Đêm/Sáng/Chiều/Tối) · lọc mức độ/loại/kết luận/độ tin cậy/tìm mã · sắp xếp ưu tiên/mới nhất/tin cậy/quy mô · **▶ Phát realtime** · đồ thị cụm (giới hạn zoom, tự căn khi đổi kích thước) · diễn biến cụm · bấm hồ sơ → **dòng thời gian** · điều tra từng bước |
+| **Lưới & Thám tử** | Biểu đồ cảnh báo **theo ngày** (có nhãn) + **dải 24 giờ** (lọc giờ hoặc khung Đêm/Sáng/Chiều/Tối) · lọc mức độ/loại/kết luận/độ tin cậy/tìm mã · sắp xếp ưu tiên/mới nhất/tin cậy/quy mô · **▶ Phát realtime** · đồ thị cụm (giới hạn zoom, tự căn khi đổi kích thước) · diễn biến cụm · bấm hồ sơ → **dòng thời gian** · điều tra từng bước · tự làm mới mỗi 15 giây khi có cảnh báo mới từ app khách |
+| **App ví khách** (`/vi/`) | Đăng nhập SĐT + PIN · số dư, khoản vay, kỳ trả tới, danh bạ · **hộp tin** (tin chính thức + tin lạ) → *Báo lừa đảo* hoặc *Làm theo hướng dẫn* (đóng vai nạn nhân: điền sẵn form chuyển tiền) · vay nhanh · chuyển tiền (có ô *lưu vào danh bạ*) → màn kết quả Tạm giữ / Khoan đã + *Vẫn chuyển* / Thành công · lịch sử |
+
+**6 tình huống trong app khách (đã chạy thử bằng `tests/smoke.py`):**
+
+| Khách | Tình huống | Luật bắt (giả lập) | Kết quả |
+|---|---|---|---|
+| 1 | Dụ vay rồi chuyển — tài khoản đã bị 4 người báo | Tài khoản bị báo + rút gần hết khoản vay cho người lạ | **Tạm giữ** |
+| 1 | Giả bên thu hồi nợ — nộp "phí phạt" vào tài khoản công ty | Nội dung trả nợ/tất toán + người nhận chưa quen | **Tạm giữ** (FinVay chỉ thu nợ trong app) |
+| 2 | Dụ vay rồi chuyển — tài khoản SIMO gắn cờ | SIMO | **Tạm giữ** |
+| 2 | Link giả "tất toán giảm 50% lãi" đòi OTP | Link lạ + đòi OTP | Lá chắn: **Lừa đảo** |
+| 3 | Dụ vay rồi chuyển — tài khoản mới tinh, dặn lưu danh bạ | Vay xong chuyển hết + số vừa lưu 0 phút + nội dung "xác minh" | **Tạm giữ** |
+| 3 | "Mẹ" nhắn Zalo nhờ chuyển gấp 3 triệu | Phần lớn số dư cho người lạ lần đầu + lời thúc giục | **Cảnh báo** (có thể là người thân thật → khuyên gọi xác minh, khách tự quyết) |
+| cả 3 | Báo nhầm tin chính thức (kênh brandname đã xác thực) | Người gửi đã xác thực, không link/tài khoản lạ | **An toàn**, không sinh cảnh báo |
+| cả 3 | Chuyển 200 nghìn cho người thân đã lưu từ lâu | Người nhận quen | **Cho phép**, không làm phiền |
+
+**Mô phỏng hoạt động** (đo 1 lần chạy ~20 giây): 29 khoản vay, 28 giao dịch → lừa bị chặn **8/8**, giao dịch bình thường bị làm phiền **0**.
+
+**Kịch bản demo đầu-cuối (đã chạy thử):** 3 khách demo, mỗi người nhận 1 kiểu tin lừa — tài khoản đã bị 4 người báo / tài khoản SIMO gắn cờ / tài khoản mới tinh kèm lời dặn *lưu số vào danh bạ*. Cả 3 làm theo tin → vay → chuyển: **cả 3 bị tạm giữ, tiền không rời ví**; chuyển 200 nghìn cho người thân đã lưu từ lâu thì **không bị làm phiền**; 6 cảnh báo `LV…` hiện trên hàng đợi đội rủi ro.
 
 ---
 
@@ -208,8 +234,10 @@ Luật cũ trượt vì 2 lỗ kinh điển: **chia nhỏ tiền** (A chuyển 2
 
 | Lớp | Biện pháp | Đã kiểm tra |
 |---|---|---|
-| **Xác thực** | Mật khẩu qua biến môi trường `THIENLA_PASSWORD`; phiên = cookie ký **HMAC-SHA256** (`THIENLA_SECRET`), **HttpOnly, SameSite=Strict, Secure** khi chạy HTTPS, hết hạn 8 giờ; so sánh hằng thời gian | Chưa đăng nhập → 401; cookie giả → bị từ chối |
-| **Phân quyền** | Cần đăng nhập: hàng đợi, đồ thị, hồ sơ, chuyển tiền, phát realtime. Công khai: Lá chắn, tổng quan, chỉ số tổng hợp | ✔ |
+| **Chế độ demo** | `DEMO_AUTOFILL=1` trả mật khẩu đội rủi ro + PIN khách demo cho trình duyệt để tự đăng nhập — **chỉ bật khi trình diễn**; bỏ cờ là về đăng nhập thường | Tắt cờ: `/api/me` và `/api/khach/demo` không còn trả mật khẩu/PIN |
+| **Xác thực khách** | SĐT + PIN 6 số; PIN băm **scrypt** + muối riêng từng tài khoản; phiên khách cookie riêng `tl_khach` (HMAC, HttpOnly, SameSite=Strict, 2 giờ); **cùng 1 thông báo** cho sai SĐT và sai PIN (không dò được SĐT nào có tài khoản); đăng nhập 5 lần/phút; mọi truy vấn lọc theo SĐT của phiên → khách không đọc được dữ liệu người khác | PIN sai → 401; cookie khách giả → 401; khách gọi API đội rủi ro → 401 |
+| **Xác thực đội rủi ro** | Mật khẩu qua biến môi trường `THIENLA_PASSWORD`; phiên = cookie ký **HMAC-SHA256** (`THIENLA_SECRET`), **HttpOnly, SameSite=Strict, Secure** khi chạy HTTPS, hết hạn 8 giờ; so sánh hằng thời gian | Chưa đăng nhập → 401; cookie giả → bị từ chối |
+| **Phân quyền** | Cần đăng nhập: hàng đợi, đồ thị, hồ sơ, chuyển tiền, phát realtime, **bật/tắt mô phỏng**. Công khai: Lá chắn, tổng quan, chỉ số tổng hợp | ✔ |
 | **Chống lạm dụng** | Giới hạn lượt theo IP: đăng nhập 5/phút, Lá chắn 30/phút, phát realtime 6/phút, điều tra 12/phút, kiểm tra chuyển tiền 60/phút, còn lại 600/phút. Chỉ tin `X-Forwarded-For` khi đặt `THIENLA_BEHIND_PROXY` | Dò mật khẩu lần thứ 6 → 429 |
 | **Header** | CSP (`script-src 'self'`, chặn nhúng khung, `base-uri 'none'`), X-Frame-Options DENY, nosniff, Referrer-Policy no-referrer, Permissions-Policy; API `Cache-Control: no-store`; `/flows` giữ CSP riêng của feature-flow | ✔ |
 | **Đầu vào** | Pydantic: tin nhắn ≤ 4.000 ký tự, mã giao dịch theo mẫu, mật khẩu ≤ 200; kiểm định dạng ngày giờ (400 thay vì 500); `limit` ≤ 500; giờ trong [0, 24] | Mã chèn SQL → 422; ngày bẩn → 400 |
@@ -218,30 +246,33 @@ Luật cũ trượt vì 2 lỗ kinh điển: **chia nhỏ tiền** (A chuyển 2
 | **Lộ API** | Khi đặt mật khẩu web, tắt `/docs`, `/redoc`, `/openapi.json`; local không mật khẩu giữ Swagger để test | 404 khi có mật khẩu |
 | **Dữ liệu cá nhân** | Dữ liệu mô phỏng 100%. Vẫn làm như thật: SĐT/CCCD che 4 số giữa; dòng thời gian chỉ hiện **năm sinh + tỉnh**; sàng lọc AI chỉ nhận số liệu tổng hợp; danh bạ so khớp **trên máy khách**, chỉ gửi cờ; đáp án chỉ trả số tổng hợp; thư mục `data/` không được phục vụ | Hồ sơ trả về: `1973`, `Đồng Nai`, `082****339` |
 | **Prompt injection** | Tin báo là dữ liệu không tin cậy (có 5 tin tiêm lệnh trong bộ thử); đầu ra AI qua schema; agent chỉ có tool đọc, không hành động thật | Lá chắn giả lập: 5/5 tin tiêm lệnh vẫn ra "lừa đảo"; toàn bộ 105/105 tin phân loại đúng |
+| **Hạ tầng** | Postgres chỉ mở cổng cho `127.0.0.1` (không ra mạng ngoài); container app chạy bằng user không phải root; bí mật chỉ nằm trong `.env` | `whoami` trong container → `thienla` |
 | **Bí mật** | `.env`, `*.db`, `data/` nằm trong `.gitignore`; repo không chứa tên ngân hàng thật hay dữ liệu khách | Grep trước mỗi lần push |
 
-**Còn lại khi lên môi trường thật:** 1 tài khoản dùng chung (chưa phân vai, chưa có nhật ký truy cập theo người); giới hạn lượt gọi giữ trong RAM (nhiều tiến trình → Redis); chưa có CSRF token riêng (đang dựa vào SameSite=Strict + API JSON); kết nối SQLite dùng chung giữa các luồng chỉ an toàn vì app **chỉ đọc**.
+**Còn lại khi lên môi trường thật:** 1 tài khoản dùng chung (chưa phân vai, chưa có nhật ký truy cập theo người); giới hạn lượt gọi giữ trong RAM (nhiều tiến trình → Redis); chưa có CSRF token riêng (đang dựa vào SameSite=Strict + API JSON); app dùng 1 kết nối Postgres chung giữa các luồng (psycopg 3 cho phép; nhiều người dùng đồng thời → chuyển sang connection pool); PIN demo dùng chung cho 3 tài khoản demo (bản thật: mỗi khách 1 PIN, khoá tạm sau N lần sai).
 
 ---
 
 ## 10. Triển khai
 
-1 VPS nhỏ **tách biệt hạ tầng công ty**; **Caddy** làm reverse proxy + HTTPS tự động; `uvicorn` dưới `systemd`.
+1 VPS nhỏ **tách biệt hạ tầng công ty**; **Docker Compose** chạy Postgres + app; **Caddy** làm reverse proxy + HTTPS tự động.
 
 ```bash
-uv sync
-python gen_data.py && uv run python build.py
-# .env trên VPS (không commit): THIENLA_PASSWORD=…  THIENLA_SECRET=$(openssl rand -hex 32)  THIENLA_BEHIND_PROXY=1
-uv run uvicorn app.main:app --host 127.0.0.1 --port 4420     # Caddy proxy ra ngoài
+cp .env.example .env     # POSTGRES_PASSWORD, THIENLA_PASSWORD, THIENLA_SECRET=$(openssl rand -hex 32), DEMO_PIN, THIENLA_BEHIND_PROXY=1
+                         # demo: DEMO_AUTOFILL=1 (tự đăng nhập), SIM_AUTOSTART=1 (bật mô phỏng sẵn)
+docker compose up -d db
+uv sync && python gen_data.py && uv run python build.py        # build XOÁ SẠCH schema public rồi dựng lại (cũng là cách reset demo)
+docker compose --profile app up -d --build                     # app ở 127.0.0.1:4420 — Caddy proxy ra ngoài
 ```
 
 ```
 thien-la/
-├── gen_data.py · build.py
-├── app/  main.py · engine.py · security.py · middleware/ · backend/ · ai/ · agents/ · graph/ · tools/
-├── web/  index.html · app.js · style.css
-├── flows/build_flows.py · flows/backend_agent.py · flows/batch_ai.py → docs/flows/*.json  (8 luồng trình chiếu)
-└── docs/ system_design.md · Thien_La_gioi_thieu.docx
+├── gen_data.py · build.py · docker-compose.yml · Dockerfile · .env.example
+├── app/  main.py · engine.py · db.py · security.py · khach.py (app ví) · sim.py (mô phỏng) · middleware/ · backend/ · ai/ · agents/ · graph/ · tools/
+├── web/  index.html · app.js · style.css (đội rủi ro)  ·  vi/ index.html · vi.js · vi.css (app khách)
+├── flows/build_flows.py · flows/backend_agent.py · flows/batch_ai.py → docs/flows/*.json  (11 luồng trình chiếu)
+├── tests/  161 test đơn vị (unittest) · smoke.py (62 phép thử API đầu-cuối)
+└── docs/ system_design.md · huong_dan_su_dung.md · Thien_La_gioi_thieu.docx · hdsd/ · tools/
 ```
 
 ---

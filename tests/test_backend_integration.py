@@ -1,5 +1,5 @@
 import json
-import sqlite3
+from app import db as pgdb
 import tempfile
 import unittest
 from pathlib import Path
@@ -18,29 +18,29 @@ class BackendIntegrationTests(unittest.TestCase):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         self.database = Path(temporary.name) / "backend.db"
-        db = sqlite3.connect(self.database)
+        db = pgdb.connect(self.database)
         row = dict(app_id="A", phone="0900000001", full_name="PRIVATE NAME", dob="1990-01-01",
                    address="PRIVATE ADDRESS", cccd="012345678901", amount="1000000", device_id="PRIVATE DEVICE",
                    applied_at="2026-11-01T08:00:00", disbursed_at="2026-11-01T08:10:00", ip_type="mobile",
                    sim_age_days="100", is_emulator="False", is_rooted_or_hooked="False", device_first_seen_hours="100",
                    fill_time_sec="180", ref1_phone="0900000002", ref2_phone="0900000003")
-        db.execute("CREATE TABLE apps (" + ",".join(row) + ")")
+        db.execute("CREATE TABLE apps (" + ",".join(c + " TEXT" for c in row) + ")")
         db.execute("INSERT INTO apps VALUES (" + ",".join("?" for _ in row) + ")", list(row.values()))
-        db.execute("CREATE TABLE transfers (transfer_id,from_wallet,to_id,to_name,to_bank,to_type,amount,created_at,"
-                   "recipient_in_contacts,contact_saved_minutes_ago,prior_transfers_to_recipient,simo_flag,to_wallet_age_days,note)")
+        db.execute("CREATE TABLE transfers (transfer_id TEXT,from_wallet TEXT,to_id TEXT,to_name TEXT,to_bank TEXT,to_type TEXT,amount TEXT,created_at TEXT,"
+                   "recipient_in_contacts TEXT,contact_saved_minutes_ago TEXT,prior_transfers_to_recipient TEXT,simo_flag TEXT,to_wallet_age_days TEXT,note TEXT)")
         for identifier, timestamp in [("CK00001", "2026-11-01T08:20:00"), ("CK00002", "2026-11-03T08:20:00")]:
             db.execute("INSERT INTO transfers VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                        (identifier, row["phone"], "001234567890", "PRIVATE RECIPIENT", "ACB", "bank", "900000",
                         timestamp, "False", "", "0", "False", "", "PRIVATE NOTE"))
-        db.execute("CREATE TABLE reports (report_id,reported_at,reporter_phone,channel,raw_text,analysis)")
+        db.execute("CREATE TABLE reports (report_id TEXT PRIMARY KEY,reported_at TEXT,reporter_phone TEXT,channel TEXT,raw_text TEXT,analysis TEXT)")
         for identifier, timestamp in [("R1", "2026-11-01T08:25:00"), ("R2", "2026-11-03T08:25:00")]:
             db.execute("INSERT INTO reports VALUES (?,?,?,?,?,?)", (identifier, timestamp, row["phone"], "app", "PRIVATE REPORT",
                        json.dumps({"verdict": "scam", "reporter_is_victim": True,
                                    "indicators": {"accounts": ["001234567890"], "phones": []}, "mode": "mock"})))
-        db.execute("CREATE TABLE alerts (alert_id,cid,ts,app_ids,signals,n_pending,verdict,case_conf)")
+        db.execute("CREATE TABLE alerts (alert_id TEXT PRIMARY KEY,cid TEXT,ts TEXT,app_ids TEXT,signals TEXT,n_pending INT,verdict TEXT,case_conf REAL)")
         db.execute("INSERT INTO alerts VALUES (?,?,?,?,?,?,?,?)", ("AL1", "C1", "2026-11-01T09:00:00", '["A"]', '[]', 0, None, None))
-        db.execute("CREATE TABLE cases (alert_id PRIMARY KEY,cid,verdict,members,victims,body)")
-        db.execute("CREATE TABLE meta (k,v)")
+        db.execute("CREATE TABLE cases (alert_id TEXT PRIMARY KEY,cid TEXT,verdict TEXT,members TEXT,victims TEXT,body TEXT)")
+        db.execute("CREATE TABLE meta (k TEXT PRIMARY KEY,v TEXT)")
         db.execute("INSERT INTO meta VALUES ('last_day','\"2026-11-25\"')")
         db.commit()
         db.close()

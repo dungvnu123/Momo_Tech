@@ -3,6 +3,8 @@ import json
 from datetime import datetime
 from pathlib import Path
 
+from app import db
+
 from . import normalize
 from .store import AI_TABLES, GraphStore, TABLES
 
@@ -155,7 +157,7 @@ def build_graph(data_dir: str | Path, database: str | Path, *, replace: bool = F
                 for table in ("edges", "nodes", "quality_issues", *TABLES):
                     store.connection.execute(f"DELETE FROM {table}")
                 for table in (*AI_TABLES, "ai_entity_members"):
-                    if store.connection.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table,)).fetchone():
+                    if db.has_table(store.connection, table):
                         store.connection.execute(f"DELETE FROM {table}")
             _import_csv(store, directory)
             writer = _Writer(store)

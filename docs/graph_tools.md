@@ -1,7 +1,7 @@
 # Tool truy vấn graph
 
 Các tool đọc dữ liệu nằm trong `app/tools/`, dùng `GraphStore`/`AIStore` để
-truy vấn SQLite theo ID. Đã gắn vào Agent điều tra; không có endpoint công
+truy vấn PostgreSQL theo ID. Đã gắn vào Agent điều tra; không có endpoint công
 khai cho từng tool. Bộ tool hiện có 11 hàm đọc và submit_case ở workflow.
 
 | File | Trách nhiệm |
@@ -94,7 +94,7 @@ chuỗi gọi tool. ID thay thế chỉ có hiệu lực trong instance này; t�
 khác sẽ không đọc được token cũ. Đây không phải cơ chế phân quyền: giới hạn
 hồ sơ được phép đọc sẽ triển khai ở tầng phiên/API khi tích hợp Agent.
 
-Mỗi lần gọi mở SQLite bằng `mode=ro`, không tạo database nếu đường dẫn sai,
+Mỗi lần gọi mở PostgreSQL bằng phiên chỉ đọc (`default_transaction_read_only`), không tạo schema nếu tên sai,
 không dựng lại schema, không nạp toàn bộ graph vào NetworkX. Truy vấn dùng
 tham số SQL và index có sẵn trên ID, nguồn và đích.
 

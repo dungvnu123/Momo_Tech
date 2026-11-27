@@ -1,0 +1,316 @@
+{
+  "id": "thienla-app-khach",
+  "title": "App ví khách: tin lừa → vay → chuyển → tạm giữ → đội rủi ro",
+  "kind": "flow",
+  "look": "iso",
+  "visibility": "private",
+  "doc_md": "",
+  "group": "Thiên La",
+  "subtitle": "Kịch bản đầu-cuối trên /vi/ — mọi lần chuyển đi qua đúng 1 bộ kiểm tra với ngữ cảnh thật tại lúc chuyển.",
+  "duration": "3 phút",
+  "level": "Ca demo",
+  "learn": [
+    "Chặn ở lúc tiền rời ví — trước khi mất tiền",
+    "Tin chính thức (kênh đã xác thực) không bị báo nhầm",
+    "Tạm giữ / báo lừa đều thành cảnh báo cho đội rủi ro ngay"
+  ],
+  "notes": [],
+  "nodes": [
+    {
+      "id": "s1",
+      "type": "start",
+      "label": "",
+      "explain": "",
+      "step": 0,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "",
+      "badge": ""
+    },
+    {
+      "id": "p2",
+      "type": "process",
+      "label": "Tin nhắn lạ trong hộp tin",
+      "explain": "Dụ vay rồi chuyển (tài khoản bị báo / SIMO / mới tinh) · giả thu hồi nợ · link giả đòi OTP · người thân nhờ chuyển gấp.",
+      "step": 1,
+      "color": "#f4b47e",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "mail",
+      "badge": "6 tình huống"
+    },
+    {
+      "id": "p3",
+      "type": "process",
+      "label": "Vay nhanh",
+      "explain": "Khoản vay giải ngân về ví chính chủ — mốc thời gian để đo 'vay xong mấy phút thì chuyển'.",
+      "step": 2,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "check",
+      "badge": ""
+    },
+    {
+      "id": "p4",
+      "type": "process",
+      "label": "Làm theo hướng dẫn",
+      "explain": "Form chuyển tiền tự điền theo tin: số tài khoản, tên, số tiền, nội dung; có thể bị dặn 'lưu số vào danh bạ'.",
+      "step": 3,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "user",
+      "badge": "đóng vai nạn nhân"
+    },
+    {
+      "id": "p5",
+      "type": "process",
+      "label": "Dựng ngữ cảnh lúc chuyển",
+      "explain": "Phút từ lúc giải ngân · tỉ lệ khoản vay/số dư · người nhận khác tên · có trong danh bạ + lưu bao lâu · đã từng chuyển chưa · SIMO · số tin báo đã có · nội dung.",
+      "step": 4,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "gear",
+      "badge": ""
+    },
+    {
+      "id": "d6",
+      "type": "decision",
+      "label": "check_transfer",
+      "explain": "ai.check_transfer — cùng 1 hàm cho app khách, bộ mô phỏng và dữ liệu lịch sử.",
+      "step": 5,
+      "color": "#cdb8ec",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "",
+      "badge": ""
+    },
+    {
+      "id": "p7",
+      "type": "process",
+      "label": "Cho phép",
+      "explain": "Người nhận quen / giao dịch bình thường — không làm phiền.",
+      "step": 6,
+      "color": "#b8e0c2",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "check",
+      "badge": ""
+    },
+    {
+      "id": "p8",
+      "type": "process",
+      "label": "Khoan đã!",
+      "explain": "Có dấu hiệu nhưng có thể là thật (vd người thân nhờ gấp) → khách đọc lý do, Huỷ hoặc Vẫn chuyển.",
+      "step": 6,
+      "color": "#f6d58e",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "alert",
+      "badge": ""
+    },
+    {
+      "id": "p9",
+      "type": "process",
+      "label": "Tạm giữ",
+      "explain": "Tài khoản bị báo/SIMO, trả 'nợ' vào TK cá nhân, hoặc vay xong chuyển hết cho người lạ chưa quen + dấu hiệu khác.",
+      "step": 6,
+      "color": "#f4b47e",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "lock",
+      "badge": "tiền chưa rời ví"
+    },
+    {
+      "id": "p10",
+      "type": "process",
+      "label": "Báo lừa đảo",
+      "explain": "Lá chắn phân tích tin; tin từ kênh chính thức đã xác thực → An toàn, không cảnh báo.",
+      "step": 7,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "mail",
+      "badge": ""
+    },
+    {
+      "id": "p11",
+      "type": "process",
+      "label": "Hàng đợi đội rủi ro",
+      "explain": "Cảnh báo trực tiếp hiện đầu hàng đợi (tự làm mới) → đồ thị, dòng thời gian, điều tra.",
+      "step": 8,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "laptop",
+      "badge": "LV…"
+    },
+    {
+      "id": "e12",
+      "type": "end",
+      "label": "",
+      "explain": "",
+      "step": 9,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "",
+      "badge": ""
+    }
+  ],
+  "edges": [
+    {
+      "source": "s1",
+      "target": "p2",
+      "label": ""
+    },
+    {
+      "source": "p2",
+      "target": "p3",
+      "label": ""
+    },
+    {
+      "source": "p3",
+      "target": "p4",
+      "label": ""
+    },
+    {
+      "source": "p4",
+      "target": "p5",
+      "label": ""
+    },
+    {
+      "source": "p5",
+      "target": "d6",
+      "label": ""
+    },
+    {
+      "source": "d6",
+      "target": "p7",
+      "label": "an toàn"
+    },
+    {
+      "source": "d6",
+      "target": "p8",
+      "label": "đáng ngờ"
+    },
+    {
+      "source": "d6",
+      "target": "p9",
+      "label": "lừa rõ"
+    },
+    {
+      "source": "p2",
+      "target": "p10",
+      "label": "khách tự báo"
+    },
+    {
+      "source": "p9",
+      "target": "p11",
+      "label": ""
+    },
+    {
+      "source": "p10",
+      "target": "p11",
+      "label": "nếu là lừa"
+    },
+    {
+      "source": "p7",
+      "target": "e12",
+      "label": ""
+    },
+    {
+      "source": "p8",
+      "target": "e12",
+      "label": ""
+    },
+    {
+      "source": "p11",
+      "target": "e12",
+      "label": ""
+    }
+  ],
+  "steps": [
+    {
+      "n": 1,
+      "title": "Tin lừa",
+      "body": "3 khách demo, mỗi người 2 tình huống lừa có thật + tin chính thức của FinVay.",
+      "note": "",
+      "note_type": "info",
+      "badge": "CA THẬT"
+    },
+    {
+      "n": 2,
+      "title": "Vay",
+      "body": "Kẻ lừa dụ vay — eKYC vẫn đạt vì chính chủ tự vay.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 3,
+      "title": "Làm theo",
+      "body": "Nút 'Làm theo hướng dẫn' để giám khảo tự đóng vai nạn nhân.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 4,
+      "title": "Ngữ cảnh",
+      "body": "Tất cả là dữ liệu tại ĐÚNG lúc chuyển — không biết tương lai.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 5,
+      "title": "Bộ kiểm tra",
+      "body": "Gemini quyết định chính; luật (app/backend/mock_ai.py) chỉ được nâng mức, và thay thế khi chưa cấu hình AI.",
+      "note": "",
+      "note_type": "info",
+      "badge": "AI"
+    },
+    {
+      "n": 6,
+      "title": "3 kết quả",
+      "body": "Đã chạy thử: 5 ca lừa → tạm giữ, ca người thân nhờ gấp → cảnh báo, chuyển cho người thân quen → cho phép.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 7,
+      "title": "Báo lừa",
+      "body": "Báo nhầm tin chính thức vẫn ra An toàn — không làm phiền đội rủi ro.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 8,
+      "title": "Đội rủi ro",
+      "body": "Cảnh báo có mã LV…, mức Khẩn với giao dịch tạm giữ.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    }
+  ],
+  "arrows": [],
+  "groups": []
+}

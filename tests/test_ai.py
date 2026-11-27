@@ -93,12 +93,12 @@ class AITests(unittest.IsolatedAsyncioTestCase):
                          "account:bank:TCB:001234567890")
 
     async def test_invalid_cached_output_is_revalidated_and_replaced(self):
-        import sqlite3
+        from app import db as pgdb
         cache = self.directory / "cache.db"
         client = FakeStructuredClient(report_output())
         service = AIService(client, cache_path=cache)
         await service.analyze_report("Call 0987654321")
-        with sqlite3.connect(cache) as connection:
+        with pgdb.connect(cache) as connection:
             connection.execute("UPDATE responses SET payload=?", (json.dumps(report_output(confidence=9)),))
         result = await service.analyze_report("Call 0987654321")
         self.assertEqual(result.confidence, 0.9)
@@ -142,6 +142,11 @@ class AITests(unittest.IsolatedAsyncioTestCase):
             await AIService(FakeStructuredClient(output)).check_transfer(request)
         result = await AIService(FakeStructuredClient(output)).check_transfer({**request, "simo_flag": True})
         self.assertEqual(result.decision, "hold")
+        for signal in ({"recipient_ring_senders": 3}, {"customer_says_coached": True}):   # tín hiệu backend mới cũng cho phép hold
+            result = await AIService(FakeStructuredClient(output)).check_transfer({**request, **signal})
+            self.assertEqual(result.decision, "hold")
+        with self.assertRaises(ValueError):   # hợp đồng chặn giá trị sai
+            await AIService(FakeStructuredClient(output)).check_transfer({**request, "share_of_balance": 1.5})
 
     async def test_timeout_propagates(self):
         class Slow(FakeStructuredClient):

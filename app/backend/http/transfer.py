@@ -28,10 +28,10 @@ def register(app, tools, adapter, META):
         """Vài giao dịch thật trong dữ liệu, chọn theo TÍN HIỆU (không dùng đáp án) để demo đủ 3 mức."""
         picks = {
             "SIMO gắn cờ": "simo_flag='True'",
-            "Người lạ, vừa lưu số": "recipient_in_contacts='True' AND CAST(contact_saved_minutes_ago AS INT) < 120 AND prior_transfers_to_recipient='0' AND to_type='bank'",
-            "Ví nhận mới mở": "to_type='momo_wallet' AND CAST(to_wallet_age_days AS INT) <= 7 AND prior_transfers_to_recipient='0'",
-            "Trả tiền phòng quen": "note LIKE 'tien phong%' AND CAST(prior_transfers_to_recipient AS INT) > 2 AND recipient_in_contacts='True' AND CAST(contact_saved_minutes_ago AS INT) > 1440",
-            "Rút về tài khoản chính chủ": "to_type='bank' AND CAST(prior_transfers_to_recipient AS INT) > 5",
+            "Người lạ, vừa lưu số": "recipient_in_contacts='True' AND NULLIF(contact_saved_minutes_ago, '')::int < 120 AND prior_transfers_to_recipient='0' AND to_type='bank'",
+            "Ví nhận mới mở": "to_type='momo_wallet' AND NULLIF(to_wallet_age_days, '')::int <= 7 AND prior_transfers_to_recipient='0'",
+            "Trả tiền phòng quen": "note LIKE 'tien phong%' AND prior_transfers_to_recipient::int > 2 AND recipient_in_contacts='True' AND NULLIF(contact_saved_minutes_ago, '')::int > 1440",
+            "Rút về tài khoản chính chủ": "to_type='bank' AND prior_transfers_to_recipient::int > 5",
         }
         fresh = lambda c: c["amount"] >= 0.8 * c["loan_amount"] and c["minutes_after_disbursal"] <= 120
         want = {"Trả tiền phòng quen": lambda c: True, "Rút về tài khoản chính chủ": lambda c: c["to_name_matches_borrower"] and fresh(c)}

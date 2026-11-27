@@ -13,7 +13,8 @@ class TransferService:
         request = TransferCheck.model_validate(transfer)
 
         def validate(result):
-            if result.decision == "hold" and not (request.simo_flag or request.reported_recipient_count):
+            if result.decision == "hold" and not (request.simo_flag or request.reported_recipient_count
+                                                  or request.recipient_ring_senders or request.customer_says_coached):
                 raise ValueError("Hold requires a recorded recipient warning; otherwise use warn")
 
         return await self.runner.run(

@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Thiên La — Hướng dẫn sử dụng</title>
+<style>
+  @page { size: A4; margin: 11mm 12mm; }
+  :root { --pink: #a50064; --pink-2: #d82d8b; --soft: #fdeef6; --line: #f0c9dd; --ink: #2b1a24; --muted: #6f5c67; }
+  * { box-sizing: border-box; }
+  body { margin: 0; color: var(--ink); font: 9.6pt/1.42 "Segoe UI", Arial, sans-serif; }
+  header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2.5pt solid var(--pink); padding-bottom: 5pt; margin-bottom: 7pt; }
+  header h1 { margin: 0; font-size: 19pt; color: var(--pink); letter-spacing: .3pt; }
+  header p { margin: 0; color: var(--muted); font-size: 9pt; text-align: right; }
+  h2 { font-size: 10.6pt; color: var(--pink); margin: 8pt 0 3pt; }
+  .box { background: var(--soft); border-radius: 6pt; padding: 6pt 9pt; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7pt; }
+  table { width: 100%; border-collapse: collapse; font-size: 9pt; }
+  td, th { border-bottom: .6pt solid var(--line); padding: 2.6pt 4pt; vertical-align: top; text-align: left; }
+  th { color: var(--muted); font-weight: 600; }
+  code, .k { font-family: Consolas, monospace; font-size: 9pt; background: #fff; border: .6pt solid var(--line); border-radius: 3pt; padding: 0 3pt; }
+  ol { margin: 2pt 0 0; padding-left: 15pt; } li { margin: 1.6pt 0; }
+  .note { color: var(--muted); font-size: 8.4pt; margin-top: 7pt; border-top: .6pt solid var(--line); padding-top: 4pt; }
+  b.p { color: var(--pink); }
+</style>
+</head>
+<body>
+<header>
+  <div><h1>THIÊN LA — Hướng dẫn sử dụng</h1>
+    <div>Trợ lý AI truy vết đường dây gian lận &amp; lừa đảo tín dụng · <i>“Một người bị lừa báo tin, cả đường dây lộ diện.”</i></div></div>
+  <p>Bản dùng thử trực tuyến<br>Chủ đề: Chống lừa đảo · An ninh mạng · Trợ lý AI</p>
+</header>
+
+<div class="grid">
+  <div class="box">
+    <h2 style="margin-top:0">1. Đường dẫn</h2>
+    <table>
+      <tr><td><b>Màn đội rủi ro</b></td><td><span class="k">{{LINK}}/</span></td></tr>
+      <tr><td><b>App ví của khách</b></td><td><span class="k">{{LINK}}/vi/</span></td></tr>
+      <tr><td><b>Luồng trình chiếu</b></td><td><span class="k">{{LINK}}/flows/</span></td></tr>
+    </table>
+  </div>
+  <div class="box">
+    <h2 style="margin-top:0">2. Tài khoản dùng thử</h2>
+    <table>
+      <tr><td><b>Đội rủi ro</b></td><td>mật khẩu <span class="k">{{PASSWORD}}</span> {{AUTOFILL_NOTE}}</td></tr>
+      <tr><td><b>Khách (3 người)</b></td><td>SĐT bên dưới · PIN <span class="k">{{PIN}}</span> — hoặc bấm tên khách ở màn đăng nhập</td></tr>
+    </table>
+  </div>
+</div>
+
+<h2>3. Ba khách demo — mỗi người 2 tình huống lừa có thật</h2>
+<table>
+  <tr><th style="width:24%">Khách</th><th>Tình huống trong hộp tin</th><th style="width:30%">Hệ thống phản ứng</th></tr>
+  {{PERSONA_ROWS}}
+</table>
+
+<h2>4. Kịch bản thử trong 3 phút</h2>
+<ol>
+  <li><b class="p">App khách</b> (<span class="k">/vi/</span>) → chọn khách thứ nhất → <b>Vay nhanh</b> → <b>Nhận giải ngân</b>.</li>
+  <li>Mở <b>Hộp tin</b> → tin từ số lạ → <b>Làm theo hướng dẫn</b> (đóng vai nạn nhân: form chuyển tiền tự điền theo tin) → <b>Chuyển</b>.
+      Kết quả: <b>Giao dịch đang tạm giữ</b>, kèm lý do — tiền không rời ví.</li>
+  <li>Quay lại tin đó → <b>Báo lừa đảo</b>: Lá chắn nói rõ vì sao là lừa và đã có bao nhiêu người báo cùng tài khoản. Báo thử 1 tin <i>chính thức</i> → ra <b>An toàn</b>.</li>
+  <li><b class="p">Màn đội rủi ro</b> → tab <b>Lưới &amp; Thám tử</b>: cảnh báo <span class="k">LV…</span> vừa sinh nằm đầu hàng đợi. Bấm vào → đồ thị quan hệ →
+      bấm 1 hồ sơ để xem <b>dòng thời gian</b> → <b>Điều tra</b> để xem từng bước lập luận và kết luận <i>kẻ gian / nạn nhân / vô hại</i>.</li>
+  <li>Bấm <b>▶ Bật mô phỏng</b>: hệ thống tự sinh khoản vay + giao dịch ngẫu nhiên; theo dõi số vụ lừa bị chặn và số giao dịch bình thường bị làm phiền.
+      Thử thêm <b>▶ Phát realtime</b>, lọc theo ngày / khung giờ <b>Đêm 0–6h</b> / mức <b>Khẩn</b>.</li>
+  <li>Tab <b>Lá chắn</b>: dán bất kỳ tin nhắn nghi lừa nào. Tab <b>Tổng quan</b>: phễu xử lý, so với luật cố định, thời gian phát hiện từng đường dây.</li>
+</ol>
+
+<div class="grid" style="margin-top:6pt">
+  <div class="box"><h2 style="margin-top:0">5. Màn hình</h2>
+    <b>Tổng quan</b> · <b>Lá chắn</b> (công khai) · <b>Chuyển tiền</b> (giao dịch mẫu → Tạm giữ/Cảnh báo/Cho phép) ·
+    <b>Lưới &amp; Thám tử</b> (hàng đợi realtime, lọc ngày/giờ/mức độ/độ tin cậy, đồ thị, dòng thời gian hồ sơ, điều tra, mô phỏng).</div>
+  <div class="box"><h2 style="margin-top:0">6. Lưu ý</h2>
+    Toàn bộ dữ liệu là <b>mô phỏng</b> (200.000 hồ sơ, thương hiệu “FinVay” hư cấu) — không có dữ liệu khách hàng thật.
+    Dữ liệu demo có thể được đặt lại về ban đầu bất kỳ lúc nào; nếu khách demo đã hết số dư, hãy dùng <b>Vay nhanh</b>.</div>
+</div>
+<p class="note">Mã nguồn, cách chạy, công nghệ và thư viện: xem README trong gói mã nguồn. Tài liệu thiết kế: <span class="k">docs/system_design.md</span>.</p>
+</body>
+</html>

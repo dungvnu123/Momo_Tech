@@ -17,16 +17,24 @@ from collections import defaultdict, deque
 from fastapi import Request
 from fastapi.responses import JSONResponse
 
+from app import db  # noqa: F401 — nạp .env TRƯỚC khi đọc biến môi trường bên dưới
+
 PASSWORD = os.environ.get("THIENLA_PASSWORD", "")
 SECRET = (os.environ.get("THIENLA_SECRET") or secrets.token_hex(32)).encode()
 COOKIE, TTL = "tl_session", 8 * 3600
+# Chế độ DEMO: giao diện tự điền/tự đăng nhập (mật khẩu đội rủi ro + PIN khách demo được trả cho trình duyệt).
+# CHỈ bật khi trình diễn; tắt (bỏ biến) là quay về đăng nhập bình thường, không cần sửa code.
+DEMO_AUTOFILL = os.environ.get("DEMO_AUTOFILL") == "1"
 
 # Cần đăng nhập: mọi thứ chạm tới dữ liệu hồ sơ. Công khai: Lá chắn (cho khách vay), tổng quan + chỉ số (chỉ số đếm tổng hợp).
 PROTECTED = ("/api/alerts", "/api/apps", "/api/transfer", "/api/live",
-             "/api/investigations", "/api/v1/agents", "/api/ai/entities", "/api/ai/triage", "/api/ai/transfer", "/api/ai/pipeline")
+             "/api/investigations", "/api/v1/agents", "/api/ai/entities", "/api/ai/triage", "/api/ai/transfer", "/api/ai/pipeline",
+             "/api/sim")
+# App ví khách (/api/khach/*) có đăng nhập RIÊNG (SĐT + PIN) — không dùng phiên đội rủi ro hay key dịch vụ.
 PUBLIC_API = ("/api/login", "/api/logout", "/api/me", "/api/overview", "/api/metrics")
 # (tiền tố, số lượt, trong bao nhiêu giây) — khớp tiền tố đầu tiên
-LIMITS = [("/api/login", 5, 60), ("/api/shield/analyze", 30, 60), ("/api/ai/shield/analyze", 30, 60),
+LIMITS = [("/api/login", 5, 60), ("/api/khach/login", 5, 60), ("/api/khach/transfer", 20, 60), ("/api/khach/report", 20, 60), ("/api/khach/lookup", 20, 60),
+          ("/api/shield/analyze", 30, 60), ("/api/ai/shield/analyze", 30, 60),
           ("/api/live", 6, 60), ("/investigate", 12, 60), ("/api/investigations", 12, 60),
           ("/api/ai/pipeline/run", 2, 60), ("/api/v1/agents/run", 12, 60), ("/api/ai/entities", 30, 60), ("/api/ai/triage", 30, 60),
           ("/api/ai/transfer/check", 60, 60), ("/api/transfer/check", 60, 60), ("/api/", 600, 60)]
@@ -95,7 +103,7 @@ class WebSecurityPolicy:
             request.headers.get("X-API-Key", "").encode(), self.service_key)
 
     def public_api(self, path):
-        return path in PUBLIC_API or path.startswith(("/api/shield/", "/api/ai/shield/"))
+        return path in PUBLIC_API or path.startswith(("/api/shield/", "/api/ai/shield/", "/api/khach/"))
 
 
 async def guard(request: Request, call_next):
@@ -114,3 +122,37 @@ async def guard(request: Request, call_next):
     if path.startswith("/api/"):
         resp.headers["Cache-Control"] = "no-store"
     return resp
+
+
+# ── Phiên KHÁCH (app ví demo): tách riêng khỏi phiên đội rủi ro, gắn với SĐT/ví ────────────
+KHACH_COOKIE, KHACH_TTL = "tl_khach", 2 * 3600
+
+
+def hash_pin(pin: str, salt: bytes) -> bytes:
+    return hashlib.scrypt(pin.encode(), salt=salt, n=2 ** 14, r=8, p=1, dklen=32)
+
+
+def check_pin(pin: str, salt: bytes, digest: bytes) -> bool:
+    return hmac.compare_digest(hash_pin(pin, bytes(salt)), bytes(digest))
+
+
+def make_khach_token(phone: str) -> str:
+    body = f"{phone}.{int(time.time()) + KHACH_TTL}"
+    return body + "." + hmac.new(SECRET, b"khach:" + body.encode(), hashlib.sha256).hexdigest()
+
+
+def khach_phone(tok: str | None) -> str | None:
+    """Trả SĐT nếu phiên khách hợp lệ, ngược lại None."""
+    try:
+        phone, exp, sig = (tok or "").split(".")
+    except ValueError:
+        return None
+    good = hmac.new(SECRET, f"khach:{phone}.{exp}".encode(), hashlib.sha256).hexdigest()
+    return phone if hmac.compare_digest(sig, good) and exp.isdigit() and int(exp) > time.time() else None
+
+
+def vntime_now():
+    """Giờ Việt Nam (GMT+7), naive — server/pod chạy UTC."""
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    return datetime.now(ZoneInfo("Asia/Ho_Chi_Minh")).replace(tzinfo=None)

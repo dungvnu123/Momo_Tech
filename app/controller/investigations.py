@@ -15,7 +15,8 @@ async def investigate(body: InvestigationRequest, request: Request):
         agent.llm_client.ensure_ready()
     except LLMNotConfiguredError:
         raise HTTPException(status_code=503, detail="Tool-calling LLM client is not configured") from None
-    if not agent.database.is_file():
+    from app import db
+    if not db.exists(agent.database):
         raise HTTPException(status_code=503, detail="Build the graph database first")
     context = AgentContext(conversation_id=body.conversation_id,
                            metadata={"cluster_id": body.cluster_id} if body.cluster_id else {})

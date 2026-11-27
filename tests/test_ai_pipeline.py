@@ -1,7 +1,7 @@
 import csv
 import hashlib
 import json
-import sqlite3
+from app import db as pgdb
 import unittest
 from pathlib import Path
 
@@ -15,6 +15,20 @@ from app.graph.ai_store import AIStore
 from app.main import create_app
 from app.services.tool_llm import ModelTurn, ToolCall
 
+
+def backend_digest(database):
+    """Dấu vân tay toàn bộ dữ liệu backend (thay cho băm file .db khi còn SQLite)."""
+    connection = pgdb.connect(database, read_only=True)
+    try:
+        digest = hashlib.sha256()
+        for (table,) in connection.execute("SELECT table_name FROM information_schema.tables "
+                                           "WHERE table_schema=current_schema() ORDER BY 1").fetchall():
+            digest.update(table.encode())
+            for row in connection.execute(f"SELECT * FROM {table} ORDER BY 1").fetchall():
+                digest.update(repr(tuple(row)).encode())
+        return digest.hexdigest()
+    finally:
+        connection.close()
 
 class PipelineClient:
     model = "pipeline-unit-test"
@@ -67,12 +81,12 @@ class PipelineTests(unittest.IsolatedAsyncioTestCase):
         self.fixture.setUp()
         self.addCleanup(self.fixture.doCleanups)
         self.root = self.fixture.database.parent / "pipeline-runs"
-        with sqlite3.connect(self.fixture.database) as db:
-            db.execute("ALTER TABLE alerts ADD COLUMN latest DEFAULT 1")
-            db.execute("ALTER TABLE alerts ADD COLUMN priority DEFAULT 10")
-            db.execute("ALTER TABLE apps ADD COLUMN signals DEFAULT '[\"mock-signal\"]'")
+        with pgdb.connect(self.fixture.database) as db:
+            db.execute("ALTER TABLE alerts ADD COLUMN latest BOOLEAN DEFAULT true")
+            db.execute("ALTER TABLE alerts ADD COLUMN priority INT DEFAULT 10")
+            db.execute("ALTER TABLE apps ADD COLUMN signals TEXT DEFAULT '[\"mock-signal\"]'")
             db.execute("UPDATE reports SET raw_text='I was tricked into sending money to ACB 001234567890' WHERE report_id='R1'")
-            db.row_factory = sqlite3.Row
+            db.row_factory = None
             row = dict(db.execute("SELECT * FROM apps").fetchone())
             row.update(app_id="B", phone="0900000002", cccd="012345678902")
             db.execute("INSERT INTO apps VALUES (" + ",".join("?" for _ in row) + ")", tuple(row.values()))
@@ -84,7 +98,7 @@ class PipelineTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_complete_pipeline_uses_ai_enrichment_and_keeps_backend_unchanged(self):
         client = PipelineClient()
-        before = hashlib.sha256(self.fixture.database.read_bytes()).hexdigest()
+        before = backend_digest(self.fixture.database)
         runner = PipelineService(client, self.fixture.database, self.root)
         result = await runner.run(self.config())
         self.assertEqual(result["status"], "completed", result)
@@ -111,7 +125,7 @@ class PipelineTests(unittest.IsolatedAsyncioTestCase):
             self.assertNotIn("analysis", next(csv.reader(f)))
         with (directory / "source" / "applications.csv").open(encoding="utf-8-sig") as f:
             self.assertNotIn("signals", next(csv.reader(f)))
-        self.assertEqual(hashlib.sha256(self.fixture.database.read_bytes()).hexdigest(), before)
+        self.assertEqual(backend_digest(self.fixture.database), before)
         self.assertNotIn("mock-signal", " ".join(client.inputs))
         with AIStore(directory / "graph.db", read_only=True) as store:
             self.assertEqual(store.connection.execute("SELECT COUNT(*) FROM edges WHERE kind='MENTIONS'").fetchone()[0], 1)

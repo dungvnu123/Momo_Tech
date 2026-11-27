@@ -36,7 +36,7 @@ def register(app, tools, adapter, META):
         if min_conf:
             where.append("COALESCE(case_conf, confidence) >= ?"); p.append(min_conf)
         if latest:
-            where.append("latest = 1")
+            where.append("latest")
         if q:
             where.append("(cid LIKE ? OR app_ids LIKE ? OR title LIKE ?)"); p += [f"%{q}%"] * 3
         w = " AND ".join(where)
@@ -47,15 +47,17 @@ def register(app, tools, adapter, META):
 
     @app.get("/api/alerts/days")
     def alert_days():
-        return tools.q("SELECT day, COUNT(*) n, SUM(severity='khan') khan, SUM(severity='cao') cao, SUM(severity='tb') tb "
+        return tools.q("SELECT day, COUNT(*) n, COUNT(*) FILTER (WHERE severity='khan') khan, COUNT(*) FILTER (WHERE severity='cao') cao, "
+                       "COUNT(*) FILTER (WHERE severity='tb') tb "
                        "FROM alerts GROUP BY day ORDER BY day")
 
 
     @app.get("/api/alerts/hours")
     def alert_hours(day: str = ""):
         """Số cảnh báo theo giờ trong ngày (0–23); có `day` thì chỉ tính ngày đó."""
-        rows = tools.q("SELECT CAST(substr(ts, 12, 2) AS INT) h, COUNT(*) n, SUM(severity='khan') khan, SUM(severity='cao') cao, "
-                       "SUM(severity='tb') tb FROM alerts WHERE (? = '' OR day = ?) GROUP BY h", day, day)
+        rows = tools.q("SELECT CAST(substr(ts, 12, 2) AS INT) h, COUNT(*) n, COUNT(*) FILTER (WHERE severity='khan') khan, "
+                       "COUNT(*) FILTER (WHERE severity='cao') cao, COUNT(*) FILTER (WHERE severity='tb') tb "
+                       "FROM alerts WHERE (?::text = '' OR day = ?) GROUP BY h", day, day)
         by = {r["h"]: r for r in rows}
         return [by.get(h, {"h": h, "n": 0, "khan": 0, "cao": 0, "tb": 0}) for h in range(24)]
 

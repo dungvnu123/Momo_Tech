@@ -1,0 +1,241 @@
+{
+  "id": "thienla-mo-phong",
+  "title": "Bộ mô phỏng hoạt động trực tiếp",
+  "kind": "flow",
+  "look": "flat",
+  "visibility": "private",
+  "doc_md": "",
+  "group": "Thiên La",
+  "subtitle": "app/sim.py — tự sinh khoản vay + chuyển tiền ngẫu nhiên để hệ thống 'đang sống' khi demo.",
+  "duration": "kỹ thuật",
+  "level": "Chi tiết",
+  "learn": [
+    "Đi qua ĐÚNG luồng của app khách — không có đường tắt",
+    "Nhãn kịch bản chỉ để đo, bộ kiểm tra không nhìn thấy",
+    "Đo 2 con số: lừa bị chặn / bình thường bị làm phiền"
+  ],
+  "notes": [],
+  "nodes": [
+    {
+      "id": "s1",
+      "type": "start",
+      "label": "",
+      "explain": "",
+      "step": 0,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "",
+      "badge": ""
+    },
+    {
+      "id": "p2",
+      "type": "process",
+      "label": "Mỗi nhịp (0,5–30 giây)",
+      "explain": "Đội rủi ro bật/tắt và chọn nhịp; SIM_AUTOSTART=1 để bật sẵn. Tự dừng sau 2.000 sự kiện.",
+      "step": 1,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "clock",
+      "badge": ""
+    },
+    {
+      "id": "d3",
+      "type": "decision",
+      "label": "Vay hay chuyển?",
+      "explain": "40% khoản vay mới (khách ngẫu nhiên trong 200.000 hồ sơ); còn lại: 1 người vừa vay chuyển tiền.",
+      "step": 2,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "",
+      "badge": ""
+    },
+    {
+      "id": "p4",
+      "type": "process",
+      "label": "Khoản vay mới",
+      "explain": "2–20 triệu, giải ngân về ví chính chủ, ghi mốc thời gian.",
+      "step": 3,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "check",
+      "badge": ""
+    },
+    {
+      "id": "d5",
+      "type": "decision",
+      "label": "Chọn kịch bản",
+      "explain": "Bình thường 72% (rút về TK chính chủ, người nhà, trả tiền phòng/mua hàng) · bị dụ vay 13% · giả thu nợ 8% · người thân nhờ gấp 7%.",
+      "step": 3,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "",
+      "badge": ""
+    },
+    {
+      "id": "p6",
+      "type": "process",
+      "label": "khach.execute_transfer",
+      "explain": "Cùng hàm với app khách: dựng ngữ cảnh → ai.check_transfer → ghi giao dịch; tạm giữ → cảnh báo LV….",
+      "step": 4,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "api",
+      "badge": ""
+    },
+    {
+      "id": "d7",
+      "type": "decision",
+      "label": "Cảnh báo?",
+      "explain": "Khách mô phỏng đọc cảnh báo: một nửa huỷ, một nửa vẫn chuyển.",
+      "step": 5,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "",
+      "badge": ""
+    },
+    {
+      "id": "p8",
+      "type": "process",
+      "label": "Bộ đếm + dòng hoạt động",
+      "explain": "Khoản vay · giao dịch · cho phép / cảnh báo / tạm giữ · lừa bị chặn / tổng · bình thường bị làm phiền · 15 sự kiện gần nhất.",
+      "step": 6,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "chart",
+      "badge": ""
+    },
+    {
+      "id": "e9",
+      "type": "end",
+      "label": "",
+      "explain": "",
+      "step": 7,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "",
+      "badge": ""
+    }
+  ],
+  "edges": [
+    {
+      "source": "s1",
+      "target": "p2",
+      "label": ""
+    },
+    {
+      "source": "p2",
+      "target": "d3",
+      "label": ""
+    },
+    {
+      "source": "d3",
+      "target": "p4",
+      "label": "vay"
+    },
+    {
+      "source": "d3",
+      "target": "d5",
+      "label": "chuyển"
+    },
+    {
+      "source": "d5",
+      "target": "p6",
+      "label": ""
+    },
+    {
+      "source": "p6",
+      "target": "d7",
+      "label": ""
+    },
+    {
+      "source": "d7",
+      "target": "p8",
+      "label": "không / đã xử lý"
+    },
+    {
+      "source": "p4",
+      "target": "p8",
+      "label": ""
+    },
+    {
+      "source": "p8",
+      "target": "p2",
+      "label": "nhịp tiếp ↺"
+    },
+    {
+      "source": "p8",
+      "target": "e9",
+      "label": "tắt"
+    }
+  ],
+  "steps": [
+    {
+      "n": 1,
+      "title": "Nhịp",
+      "body": "Truy vấn DB chạy ở luồng riêng — web không bị đứng.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 2,
+      "title": "Vay hay chuyển",
+      "body": "Chỉ người vừa vay mới chuyển — đúng hình dạng 'vay xong chuyển đi'.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 3,
+      "title": "Kịch bản",
+      "body": "Nhãn kịch bản không được đưa vào bộ kiểm tra.",
+      "note": "",
+      "note_type": "info",
+      "badge": "CÔNG BẰNG"
+    },
+    {
+      "n": 4,
+      "title": "Kiểm tra",
+      "body": "Giao dịch tạm giữ hiện trên hàng đợi với chữ '(mô phỏng)'.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 5,
+      "title": "Khách quyết",
+      "body": "Cảnh báo không chặn cứng — khách vẫn được quyền chuyển.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 6,
+      "title": "Đo",
+      "body": "Một lần chạy ~20 giây: lừa bị chặn 8/8, bình thường bị làm phiền 0.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    }
+  ],
+  "arrows": [],
+  "groups": []
+}

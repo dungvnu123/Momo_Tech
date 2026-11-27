@@ -2,12 +2,14 @@ import json
 
 
 def times_reported(tools, ids, as_of="9999"):
-    ids = set(ids)
-    n = 0
-    for r in tools.q("SELECT analysis FROM reports WHERE reported_at <= ?", as_of):
-        ind = json.loads(r["analysis"])["indicators"]
-        n += bool(ids & set(ind["accounts"] + ind["phones"]))
-    return n
+    """Số tin báo (tới as_of) nhắc tới 1 trong các tài khoản/SĐT. Lọc trong Postgres bằng JSONB + index GIN
+    (dựng ở build.py) — không kéo cả bảng tin báo về Python. Gọi thẳng psycopg vì toán tử `?|` trùng dấu `?`."""
+    ids = sorted({x for x in ids if x})
+    if not ids:
+        return 0
+    return tools.db.raw.execute(
+        "SELECT COUNT(*) FROM reports WHERE reported_at <= %s AND ((analysis::jsonb->'indicators'->'accounts') ?| %s "
+        "OR (analysis::jsonb->'indicators'->'phones') ?| %s)", (as_of, ids, ids)).fetchone()[0]
 
 
 def alert_row(r):

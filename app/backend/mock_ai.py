@@ -13,7 +13,8 @@ OFFICIAL = "FinVay"   # thương hiệu hư cấu trong dữ liệu mô phỏng
 INJECTION = re.compile(r"(?i)(bo qua moi chi dan|\[system\]|assistant must|ghi chu cho ai)")
 SCAM_HINT = re.compile(r"(?i)(chuyen|nop|ck|stk|\btk\b|momo|thanh toan ngay|truy cap|phi kich hoat|giam 50|tat toan|cong an|khoi kien|xac minh|kich hoat)")
 VICTIM_HINT = re.compile(r"(?i)(toi bi lua|toi vua vay|toi da mat|nho .* ho tro|mat tien|khong goi duoc|chan lien lac)")
-LEGIT_HINT = re.compile(r"(?i)(khong yeu cau chuyen khoan|ma otp cua ban|cam on quy khach da thanh toan)")
+OTP_ASK = re.compile(r"(?i)(nhap|cung cap|gui|doc)( lai)? ma otp|otp vua nhan")
+LEGIT_HINT = re.compile(r"(?i)(khong (bao gio )?yeu cau chuyen (khoan|tien)|ma otp cua ban|cam on quy khach da thanh toan|da duoc giai ngan ve vi)")
 URL_RE = re.compile(r"(?i)\b(?:https?://)?((?:[a-z0-9-]+\.)+(?:com|net|top|vn|ly)(?:/[\w-]+)?)")
 ACC_RE = re.compile(r"(?<![\w])((?:[0-9oO][ .]?){8,16}[0-9oO])(?![\w])")
 
@@ -37,14 +38,18 @@ def extract_indicators(text: str) -> dict:
 
 
 # ── 1. Lá chắn: phân tích tin báo ─────────────────────────────────────────────────────
-def analyze_report(text: str) -> dict:
+def analyze_report(text: str, sender_verified: bool = False) -> dict:
+    """sender_verified: tin đến từ kênh chính thức đã xác thực (brandname do nhà mạng xác thực) — chỉ app biết, người dán tin thì không."""
     t = plain(text)[:2000]
     ind = extract_indicators(t)
     reasons = []
     if INJECTION.search(t):
         reasons.append("Tin chứa câu tìm cách ra lệnh cho hệ thống kiểm duyệt — dấu hiệu lừa đảo, bị bỏ qua.")
     is_victim = bool(VICTIM_HINT.search(t))
-    if LEGIT_HINT.search(t) and not (ind["accounts"] or ind["phones"][1:]) and not INJECTION.search(t):
+    if sender_verified and not (ind["accounts"] or ind["urls"]) and not INJECTION.search(t):
+        verdict, conf = "safe", 0.95
+        reasons.append(f"Tin đến từ kênh chính thức đã xác thực của {OFFICIAL}, không chứa tài khoản hay đường link lạ.")
+    elif LEGIT_HINT.search(t) and not (ind["accounts"] or ind["phones"][1:]) and not INJECTION.search(t):
         verdict, conf = "safe", 0.8
         reasons.append(f"Khớp mẫu tin chính thức của {OFFICIAL}: không yêu cầu chuyển khoản cá nhân.")
     elif (ind["accounts"] or ind["phones"]) and SCAM_HINT.search(t):
@@ -52,6 +57,11 @@ def analyze_report(text: str) -> dict:
         reasons.append(f"Yêu cầu chuyển tiền vào tài khoản/ví cá nhân — {OFFICIAL} chỉ thu tiền trong ứng dụng.")
         if ind["urls"]:
             reasons.append("Có đường link lạ, không phải tên miền chính thức.")
+    elif ind["urls"] and (SCAM_HINT.search(t) or OTP_ASK.search(t)):
+        verdict, conf = "scam", 0.8
+        reasons.append(f"Dẫn tới đường link lạ ({', '.join(ind['urls'])}) — không phải tên miền chính thức của {OFFICIAL}.")
+        if OTP_ASK.search(t):
+            reasons.append(f"Đòi nhập/cung cấp mã OTP — {OFFICIAL} không bao giờ hỏi OTP.")
     elif SCAM_HINT.search(t):
         verdict, conf = "suspicious", 0.5
         reasons.append("Có lời lẽ giục chuyển tiền nhưng chưa trích được tài khoản.")
@@ -65,10 +75,24 @@ def analyze_report(text: str) -> dict:
 
 
 # ── 2. Cảnh báo lúc chuyển tiền ─────────────────────────────────────────────────────────
+NOTE_TAGS = {"fee": r"phi giai ngan|xac minh|bao lanh|hoan tien|kich hoat",
+             "debt_collection": r"tra no|tat toan|thanh toan (khoan )?vay|no qua han|thu hoi no|finvay",
+             "urgent": r"gap|cap cuu|benh vien|tai nan|cong an|khan cap"}
+
+
+def note_tags(note) -> list[str]:
+    """Phân loại nội dung chuyển khoản thành nhãn — gửi nhãn cho AI thay vì chữ khách gõ (không lộ dữ liệu riêng)."""
+    text = plain(note or "")
+    return [tag for tag, pattern in NOTE_TAGS.items() if re.search(f"(?i){pattern}", text)]
+
+
 def check_transfer(ctx: dict) -> dict:
     """ctx: amount, loan_amount, minutes_after_disbursal, to_name_matches_borrower, recipient_in_contacts,
     contact_saved_minutes_ago, prior_transfers_to_recipient, simo_flag, to_wallet_age_days, note, times_reported."""
     reasons = []
+    ring = ctx.get("ring_case")
+    if ring:
+        reasons.append(f"Tài khoản nhận thuộc đường dây {ring['cid']} đang bị điều tra — đã nhận tiền từ {ring['n_senders']} hồ sơ vay khác.")
     if ctx.get("simo_flag"):
         reasons.append("Tài khoản nhận nằm trong danh sách nghi gian lận của hệ thống SIMO (NHNN).")
     if ctx.get("times_reported"):
@@ -76,27 +100,50 @@ def check_transfer(ctx: dict) -> dict:
     fresh_loan = ctx.get("minutes_after_disbursal", 1e9) <= 120 and ctx["amount"] >= 0.8 * max(ctx.get("loan_amount") or 1, 1)
     stranger = not ctx.get("to_name_matches_borrower")
     unknown = ctx.get("prior_transfers_to_recipient", 0) == 0 and (
-        not ctx.get("recipient_in_contacts") or (ctx.get("contact_saved_minutes_ago") or 1e9) < 180)
+        not ctx.get("recipient_in_contacts")
+        or (ctx.get("contact_saved_minutes_ago") is not None and ctx["contact_saved_minutes_ago"] < 180))   # 0 phút = VỪA lưu, không phải "không có"
     if fresh_loan and stranger:
         reasons.append("Chuyển gần hết khoản vay vừa giải ngân cho người khác tên.")
     if fresh_loan and stranger and unknown:
         reasons.append("Người nhận không có trong danh bạ (hoặc vừa được lưu vài phút trước) và bạn chưa từng chuyển cho họ.")
     if ctx.get("to_wallet_age_days") not in (None, "") and int(ctx["to_wallet_age_days"]) <= 7:
         reasons.append(f"Ví nhận mới mở {ctx['to_wallet_age_days']} ngày.")
-    if re.search(r"(?i)phi giai ngan|xac minh|bao lanh|hoan tien|kich hoat", plain(ctx.get("note") or "")):
+    tags = note_tags(ctx.get("note"))
+    if "fee" in tags:
         reasons.append("Nội dung chuyển khoản giống kịch bản 'phí giải ngân / xác minh'.")
     known = ctx.get("prior_transfers_to_recipient", 0) > 0 and ctx.get("recipient_in_contacts") and (ctx.get("contact_saved_minutes_ago") or 0) >= 1440
-    if known and not (ctx.get("simo_flag") or ctx.get("times_reported")):
+    if known and not (ring or ctx.get("simo_flag") or ctx.get("times_reported")):
         return {"decision": "allow", "reasons": [f"Người nhận quen: đã chuyển {ctx['prior_transfers_to_recipient']} lần, có trong danh bạ từ lâu."],
                 "message_for_customer": "", "mode": MODE}
-    hard = ctx.get("simo_flag") or ctx.get("times_reported")
+    # Giả bên thu hồi nợ: "trả nợ / tất toán" vào tài khoản cá nhân — FinVay chỉ thu nợ trong ứng dụng, không bao giờ qua TK cá nhân
+    fake_collect = "debt_collection" in tags and unknown
+    if fake_collect:
+        reasons.append("Nội dung là trả nợ/tất toán nhưng người nhận là tài khoản cá nhân — FinVay chỉ thu nợ trong ứng dụng.")
+    # Người lạ lần đầu + phần lớn số dư (kịch bản "người thân nhờ chuyển gấp" khi tài khoản mạng xã hội bị chiếm)
+    bal = ctx.get("balance")
+    big_new = bal is not None and stranger and unknown and ctx["amount"] >= max(0.5 * bal, 2_000_000)
+    if big_new and not fresh_loan:
+        reasons.append("Chuyển phần lớn số dư cho người lạ lần đầu.")
+    if "urgent" in tags and unknown:
+        reasons.append("Nội dung mang tính thúc giục/khẩn cấp — chiêu thường gặp khi mạo danh người thân.")
+    hard = ring or ctx.get("simo_flag") or ctx.get("times_reported") or fake_collect
     decision = "hold" if hard or (fresh_loan and stranger and unknown and len(reasons) >= 3) else \
-               "warn" if (fresh_loan and stranger) else "allow"
-    msg = {"hold": "Giao dịch đang được tạm giữ để bảo vệ bạn. FinVay KHÔNG BAO GIỜ thu phí giải ngân hay phí xác minh. "
-                   "Nếu ai đó hướng dẫn bạn vay rồi chuyển tiền, đó là lừa đảo.",
-           "warn": "Bạn sắp chuyển gần hết khoản vay vừa nhận cho người lạ. Hãy chắc chắn bạn biết người nhận.",
+               "warn" if (fresh_loan and stranger) or big_new else "allow"
+    msg = {"hold": ("Giao dịch đang được tạm giữ để bảo vệ bạn. FinVay chỉ thu nợ trong ứng dụng, KHÔNG BAO GIỜ yêu cầu chuyển vào tài khoản cá nhân."
+                    if fake_collect else
+                    "Giao dịch đang được tạm giữ để bảo vệ bạn. FinVay KHÔNG BAO GIỜ thu phí giải ngân hay phí xác minh. "
+                    "Nếu ai đó hướng dẫn bạn vay rồi chuyển tiền, đó là lừa đảo."),
+           "warn": ("Bạn sắp chuyển phần lớn số dư cho người chưa từng giao dịch. Nếu là người thân nhắn qua mạng xã hội, hãy GỌI ĐIỆN xác minh trước."
+                    if big_new and not fresh_loan else
+                    "Bạn sắp chuyển gần hết khoản vay vừa nhận cho người lạ. Hãy chắc chắn bạn biết người nhận."),
            "allow": ""}[decision]
     return {"decision": decision, "reasons": reasons, "message_for_customer": msg, "mode": MODE}
+
+
+def risk_score(decision: str, reasons: list) -> int:
+    """Điểm rủi ro 0–100 để hiển thị: dải theo quyết định, trong dải tăng theo số lý do."""
+    lo, hi = {"allow": (2, 30), "warn": (45, 75), "hold": (80, 99)}[decision]
+    return min(hi, lo + 6 * len(reasons))
 
 
 # ── 3. Sàng lọc cụm ─────────────────────────────────────────────────────────────────────

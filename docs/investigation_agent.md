@@ -32,7 +32,7 @@ uv run python -m app.agents.investigation --app-id HS00001 --demo --stream
 ```
 
 Nếu uv chưa nằm trong PATH, dùng `.\.tools\bin\uv.exe` thay `uv`.
-Demo gọi thật các tool trên SQLite local theo thứ tự: đọc hồ sơ, dòng tiền,
+Demo gọi thật các tool trên PostgreSQL local theo thứ tự: đọc hồ sơ, dòng tiền,
 quan hệ thiết bị, bằng chứng rồi submit. Model lựa chọn tool được mô phỏng,
 kết luận luôn `inconclusive`; demo không đo chất lượng suy luận hoặc phát
 hiện gian lận và không gửi dữ liệu tới dịch vụ ngoài.
@@ -84,7 +84,7 @@ verdict. Nếu thiếu client/model hoặc database, API trả `503` trước kh
   gồm metadata chữ ký, khi gửi lịch sử ở lượt tiếp theo; tắt tự thực thi
   function trong SDK để ngân sách luôn do workflow kiểm soát.
 - Mặc định timeout 30 giây cho một lần gọi và 180 giây cho toàn phiên. Hủy
-  caller truyền xuống model; truy vấn SQLite chạy trong thread chỉ đọc có
+  caller truyền xuống model; truy vấn PostgreSQL chạy trong thread chỉ đọc có
   thể hoàn tất sau khi caller hủy nhưng không có tác dụng ghi dữ liệu.
 - Mỗi phiên tạo GraphTools riêng, không trộn ID thay thế hoặc bằng chứng
   giữa các lần điều tra. Chỉ đưa dữ liệu của phiên hiện tại vào model;

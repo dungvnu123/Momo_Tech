@@ -71,9 +71,10 @@ def main():
     args.investigation_limit = args.investigation_limit if args.investigation_limit is not None else (2 if args.command == "pipeline" else 4)
     if args.command == "pipeline" and (args.report_limit > 12 or args.investigation_limit > 4):
         parser.error("Pipeline limits: at most 12 reports and 4 investigations")
-    if args.command == "pipeline" and not args.backend_database.is_file():
+    from app import db
+    if args.command == "pipeline" and not db.exists(args.backend_database):
         parser.error("Build the backend database before running the pipeline")
-    if args.command != "pipeline" and not args.database.is_file():
+    if args.command != "pipeline" and not db.exists(args.database):
         parser.error("Build the graph database before running AI processing")
     if args.command == "triage" and args.groups is None:
         parser.error("triage requires --groups with a JSON list of cluster_id/app_ids")

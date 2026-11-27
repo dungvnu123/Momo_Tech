@@ -1,10 +1,16 @@
 """Attach backend web features after the AI routes."""
 import json
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi.staticfiles import StaticFiles
 from feature_flow import create_app as create_flow_app
+
+from pydantic import BaseModel, Field
+
+from app import khach
+from app.sim import SIM
 
 from .http import alerts, live, metrics, shield, transfer
 from .integration import BackendAI
@@ -31,6 +37,33 @@ def mount_backend(app, database):
     app.router.lifespan_context = lifespan
     for feature in (shield, transfer, alerts, live, metrics):
         feature.register(app, tools, adapter, metadata)
+
+    # App ví khách (/vi/ + /api/khach/*): dùng chung kết nối; AI thật qua adapter, chưa cấu hình → luật giả lập
+    khach.tools, khach.adapter = tools, adapter
+    app.include_router(khach.router)
+
+    # Bộ mô phỏng hoạt động (đội rủi ro bật/tắt; luôn dùng luật giả lập để không tốn chi phí AI)
+    class SimIn(BaseModel):
+        interval: float = Field(default=2.0, ge=0.5, le=30)
+
+    @app.get("/api/sim")
+    def sim_status():
+        return SIM.status()
+
+    @app.post("/api/sim/start")
+    async def sim_start(body: SimIn):
+        SIM.start(body.interval)
+        return SIM.status()
+
+    @app.post("/api/sim/stop")
+    def sim_stop():
+        SIM.stop()
+        return SIM.status()
+
+    if os.environ.get("SIM_AUTOSTART") == "1":
+        @app.on_event("startup")
+        async def _autostart_sim():
+            SIM.start(float(os.environ.get("SIM_INTERVAL", "3")))
 
     @app.get("/api/overview")
     def overview():

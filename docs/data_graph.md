@@ -2,14 +2,14 @@
 
 Module độc lập tại `app/graph/`; phần dựng graph cơ sở không gọi LLM.
 Agent truy cập qua tool, pipeline AI bổ sung nhận định trong `AIStore`.
-SQLite lưu toàn bộ dữ liệu nguồn và quan hệ. NetworkX chỉ tải graph con khi
+PostgreSQL lưu toàn bộ dữ liệu nguồn và quan hệ. NetworkX chỉ tải graph con khi
 tra cứu, tránh nạp toàn bộ graph của 200.000 hồ sơ vào RAM.
 
 ```text
 app/graph/
 ├── normalize.py   # định danh ví, tài khoản ngân hàng, SĐT, dải IP
 ├── builder.py     # nạp CSV và dựng node/cạnh trong một transaction
-├── store.py       # SQLite, thống kê, truy xuất nguồn và graph con
+├── store.py       # PostgreSQL, thống kê, truy xuất nguồn và graph con
 └── __main__.py    # lệnh build và inspect
 ```
 
@@ -75,7 +75,7 @@ Mỗi cạnh có `source_table`, `source_id`, `observed_at`. `observed_at` là t
 điểm hồ sơ/giao dịch/tin báo ghi nhận, không phải thời điểm mở ví. Cạnh `SENT_TO`
 có số tiền, phút sau giải ngân, phần trăm khoản vay và ngữ cảnh người nhận nếu
 CSV có cung cấp. Trường không có được biểu diễn bằng `None`, không suy ra là
-`False`. Toàn bộ dòng nguồn vẫn được giữ trong SQLite.
+`False`. Toàn bộ dòng nguồn vẫn được giữ trong PostgreSQL.
 
 ## Truy vấn bằng Python
 

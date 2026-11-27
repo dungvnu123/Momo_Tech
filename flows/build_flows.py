@@ -308,6 +308,119 @@ def hang_doi():
     return f
 
 
+# ── 7. App ví khách: từ tin lừa tới tạm giữ + cảnh báo đội rủi ro ──────────────────────────
+def app_khach():
+    f = Flow("thienla-app-khach", "App ví khách: tin lừa → vay → chuyển → tạm giữ → đội rủi ro")
+    f.group, f.look = GROUP, "iso"
+    f.meta(subtitle="Kịch bản đầu-cuối trên /vi/ — mọi lần chuyển đi qua đúng 1 bộ kiểm tra với ngữ cảnh thật tại lúc chuyển.",
+           duration="3 phút", level="Ca demo",
+           learn=["Chặn ở lúc tiền rời ví — trước khi mất tiền",
+                  "Tin chính thức (kênh đã xác thực) không bị báo nhầm",
+                  "Tạm giữ / báo lừa đều thành cảnh báo cho đội rủi ro ngay"])
+    s = f.start()
+    msg = f.process("Tin nhắn lạ trong hộp tin", step=1, icon="mail", badge="6 tình huống",
+                    explain="Dụ vay rồi chuyển (tài khoản bị báo / SIMO / mới tinh) · giả thu hồi nợ · link giả đòi OTP · người thân nhờ chuyển gấp.")
+    loan = f.process("Vay nhanh", step=2, icon="check", explain="Khoản vay giải ngân về ví chính chủ — mốc thời gian để đo 'vay xong mấy phút thì chuyển'.")
+    follow = f.process("Làm theo hướng dẫn", step=3, icon="user", badge="đóng vai nạn nhân",
+                       explain="Form chuyển tiền tự điền theo tin: số tài khoản, tên, số tiền, nội dung; có thể bị dặn 'lưu số vào danh bạ'.")
+    ctx = f.process("Dựng ngữ cảnh lúc chuyển", step=4, icon="gear",
+                    explain="Phút từ lúc giải ngân · tỉ lệ khoản vay/số dư · người nhận khác tên · có trong danh bạ + lưu bao lâu · đã từng chuyển chưa · SIMO · số tin báo đã có · nội dung.")
+    chk = f.decision("check_transfer", step=5,
+                     explain="ai.check_transfer — cùng 1 hàm cho app khách, bộ mô phỏng và dữ liệu lịch sử.")
+    ok = f.process("Cho phép", step=6, icon="check", explain="Người nhận quen / giao dịch bình thường — không làm phiền.")
+    warn = f.process("Khoan đã!", step=6, icon="alert", explain="Có dấu hiệu nhưng có thể là thật (vd người thân nhờ gấp) → khách đọc lý do, Huỷ hoặc Vẫn chuyển.")
+    hold = f.process("Tạm giữ", step=6, icon="lock", badge="tiền chưa rời ví",
+                     explain="Tài khoản bị báo/SIMO, trả 'nợ' vào TK cá nhân, hoặc vay xong chuyển hết cho người lạ chưa quen + dấu hiệu khác.")
+    rep = f.process("Báo lừa đảo", step=7, icon="mail", explain="Lá chắn phân tích tin; tin từ kênh chính thức đã xác thực → An toàn, không cảnh báo.")
+    q = f.process("Hàng đợi đội rủi ro", step=8, icon="laptop", badge="LV…",
+                  explain="Cảnh báo trực tiếp hiện đầu hàng đợi (tự làm mới) → đồ thị, dòng thời gian, điều tra.")
+    e = f.end()
+    set_step(f, e, 9)
+    for nid, c in ((msg, "#f4b47e"), (chk, "#cdb8ec"), (hold, "#f4b47e"), (warn, "#f6d58e"), (ok, "#b8e0c2")):
+        color(f, nid, c)
+    f.link(s, msg); f.link(msg, loan); f.link(loan, follow); f.link(follow, ctx); f.link(ctx, chk)
+    f.link(chk, ok, "an toàn"); f.link(chk, warn, "đáng ngờ"); f.link(chk, hold, "lừa rõ")
+    f.link(msg, rep, "khách tự báo"); f.link(hold, q); f.link(rep, q, "nếu là lừa"); f.link(ok, e); f.link(warn, e); f.link(q, e)
+    f.narrate(1, "Tin lừa", "3 khách demo, mỗi người 2 tình huống lừa có thật + tin chính thức của FinVay.", badge="CA THẬT")
+    f.narrate(2, "Vay", "Kẻ lừa dụ vay — eKYC vẫn đạt vì chính chủ tự vay.")
+    f.narrate(3, "Làm theo", "Nút 'Làm theo hướng dẫn' để giám khảo tự đóng vai nạn nhân.")
+    f.narrate(4, "Ngữ cảnh", "Tất cả là dữ liệu tại ĐÚNG lúc chuyển — không biết tương lai.")
+    f.narrate(5, "Bộ kiểm tra", "Gemini quyết định chính; luật (app/backend/mock_ai.py) chỉ được nâng mức, và thay thế khi chưa cấu hình AI.", badge="AI")
+    f.narrate(6, "3 kết quả", "Đã chạy thử: 5 ca lừa → tạm giữ, ca người thân nhờ gấp → cảnh báo, chuyển cho người thân quen → cho phép.")
+    f.narrate(7, "Báo lừa", "Báo nhầm tin chính thức vẫn ra An toàn — không làm phiền đội rủi ro.")
+    f.narrate(8, "Đội rủi ro", "Cảnh báo có mã LV…, mức Khẩn với giao dịch tạm giữ.")
+    return f
+
+
+# ── 8. Bộ mô phỏng hoạt động ─────────────────────────────────────────────────────────
+def mo_phong():
+    f = Flow("thienla-mo-phong", "Bộ mô phỏng hoạt động trực tiếp")
+    f.group = GROUP
+    f.meta(subtitle="app/sim.py — tự sinh khoản vay + chuyển tiền ngẫu nhiên để hệ thống 'đang sống' khi demo.",
+           duration="kỹ thuật", level="Chi tiết",
+           learn=["Đi qua ĐÚNG luồng của app khách — không có đường tắt",
+                  "Nhãn kịch bản chỉ để đo, bộ kiểm tra không nhìn thấy",
+                  "Đo 2 con số: lừa bị chặn / bình thường bị làm phiền"])
+    s = f.start()
+    tick = f.process("Mỗi nhịp (0,5–30 giây)", step=1, icon="clock", explain="Đội rủi ro bật/tắt và chọn nhịp; SIM_AUTOSTART=1 để bật sẵn. Tự dừng sau 2.000 sự kiện.")
+    which = f.decision("Vay hay chuyển?", step=2, explain="40% khoản vay mới (khách ngẫu nhiên trong 200.000 hồ sơ); còn lại: 1 người vừa vay chuyển tiền.")
+    loan = f.process("Khoản vay mới", step=3, icon="check", explain="2–20 triệu, giải ngân về ví chính chủ, ghi mốc thời gian.")
+    kind = f.decision("Chọn kịch bản", step=3,
+                      explain="Bình thường 72% (rút về TK chính chủ, người nhà, trả tiền phòng/mua hàng) · bị dụ vay 13% · giả thu nợ 8% · người thân nhờ gấp 7%.")
+    exe = f.process("khach.execute_transfer", step=4, icon="api", explain="Cùng hàm với app khách: dựng ngữ cảnh → ai.check_transfer → ghi giao dịch; tạm giữ → cảnh báo LV….")
+    conf = f.decision("Cảnh báo?", step=5, explain="Khách mô phỏng đọc cảnh báo: một nửa huỷ, một nửa vẫn chuyển.")
+    cnt = f.process("Bộ đếm + dòng hoạt động", step=6, icon="chart",
+                    explain="Khoản vay · giao dịch · cho phép / cảnh báo / tạm giữ · lừa bị chặn / tổng · bình thường bị làm phiền · 15 sự kiện gần nhất.")
+    e = f.end()
+    set_step(f, e, 7)
+    f.link(s, tick); f.link(tick, which); f.link(which, loan, "vay"); f.link(which, kind, "chuyển"); f.link(kind, exe)
+    f.link(exe, conf); f.link(conf, cnt, "không / đã xử lý"); f.link(loan, cnt); f.link(cnt, tick, "nhịp tiếp ↺"); f.link(cnt, e, "tắt")
+    f.narrate(1, "Nhịp", "Truy vấn DB chạy ở luồng riêng — web không bị đứng.")
+    f.narrate(2, "Vay hay chuyển", "Chỉ người vừa vay mới chuyển — đúng hình dạng 'vay xong chuyển đi'.")
+    f.narrate(3, "Kịch bản", "Nhãn kịch bản không được đưa vào bộ kiểm tra.", badge="CÔNG BẰNG")
+    f.narrate(4, "Kiểm tra", "Giao dịch tạm giữ hiện trên hàng đợi với chữ '(mô phỏng)'.")
+    f.narrate(5, "Khách quyết", "Cảnh báo không chặn cứng — khách vẫn được quyền chuyển.")
+    f.narrate(6, "Đo", "Một lần chạy ~20 giây: lừa bị chặn 8/8, bình thường bị làm phiền 0.")
+    return f
+
+
+# ── 9. Hạ tầng + bảo mật ─────────────────────────────────────────────────────────────
+def ha_tang():
+    f = Flow("thienla-ha-tang", "Hạ tầng và bảo mật: một yêu cầu đi qua những lớp nào")
+    f.group, f.look = GROUP, "iso"
+    f.meta(subtitle="Docker Compose: PostgreSQL 16 + web app FastAPI (user không phải root). Bí mật chỉ nằm trong .env.",
+           duration="kỹ thuật", level="Chi tiết",
+           learn=["2 loại phiên tách biệt: đội rủi ro và khách",
+                  "Giới hạn lượt gọi + header bảo mật ở 1 chỗ (middleware)",
+                  "Chế độ demo bật/tắt bằng cờ, không sửa code"])
+    s = f.start()
+    br = f.process("Trình duyệt", step=1, icon="laptop", explain="Màn đội rủi ro (/), app ví khách (/vi/), luồng trình chiếu (/flows/).")
+    px = f.process("Caddy (HTTPS)", step=2, icon="balancer", explain="Reverse proxy + chứng chỉ tự động khi lên VPS; THIENLA_BEHIND_PROXY=1 để lấy IP thật + cookie Secure.")
+    mw = f.process("Middleware bảo mật", step=3, icon="lock", badge="security.guard",
+                   explain="Giới hạn lượt theo IP (đăng nhập 5/phút…) · chặn API cần đăng nhập · CSP, X-Frame-Options, nosniff, no-referrer · no-store cho API.")
+    who = f.decision("Loại phiên?", step=4, explain="Cookie ký HMAC-SHA256, HttpOnly, SameSite=Strict. Đội rủi ro: mật khẩu (8 giờ). Khách: SĐT + PIN băm scrypt (2 giờ).")
+    risk = f.process("API đội rủi ro", step=5, icon="api", explain="Hàng đợi, đồ thị, hồ sơ (đã tối thiểu hoá PII), điều tra, phát realtime, mô phỏng.")
+    kh = f.process("API khách", step=5, icon="user", explain="Chỉ dữ liệu của chính SĐT đang đăng nhập; cùng 1 thông báo cho sai SĐT và sai PIN.")
+    pub = f.process("Công khai", step=5, icon="file", explain="Lá chắn, tổng quan, chỉ số tổng hợp — không có dữ liệu cá nhân.")
+    dbn = f.process("PostgreSQL 16", step=6, icon="database", badge="127.0.0.1:5433",
+                    explain="Trong Docker, chỉ mở cho máy mình. build.py nạp ~1,3 triệu dòng bằng COPY; dữ liệu mô phỏng 100%.")
+    e = f.end()
+    set_step(f, e, 7)
+    for nid, c in ((mw, "#f4b47e"), (dbn, "#cdb8ec")):
+        color(f, nid, c)
+    f.link(s, br); f.link(br, px); f.link(px, mw); f.link(mw, who); f.link(who, risk, "đội rủi ro"); f.link(who, kh, "khách"); f.link(who, pub, "không cần")
+    f.link(risk, dbn); f.link(kh, dbn); f.link(pub, dbn); f.link(dbn, e)
+    f.narrate(1, "Trình duyệt", "3 cửa vào cho 3 đối tượng.")
+    f.narrate(2, "HTTPS", "Bản thi chạy sau Caddy; chạy trên máy thì bỏ qua lớp này.")
+    f.narrate(3, "Middleware", "Mọi yêu cầu đều qua đây trước — 1 chỗ để rà soát.", badge="BẢO MẬT")
+    f.narrate(4, "Phiên", "Phiên khách không mở được API đội rủi ro và ngược lại.",
+              note="DEMO_AUTOFILL=1 trả mật khẩu/PIN cho trình duyệt để tự đăng nhập — chỉ bật khi trình diễn.", note_type="warn")
+    f.narrate(5, "Phân quyền", "Đã thử: khách gọi API đội rủi ro → 401; cookie giả → 401; PIN sai → 401.")
+    f.narrate(6, "Dữ liệu", "Đặt lại demo = chạy lại build.py (xoá sạch rồi dựng lại ~15 giây).")
+    return f
+
+
 if __name__ == "__main__":
-    for build in (kien_truc, ca_an_giang, agent_loop, vong_doi, realtime, hang_doi, backend_agent_pipeline, batch_ai_pipeline):
+    for build in (kien_truc, ca_an_giang, agent_loop, vong_doi, realtime, hang_doi, backend_agent_pipeline, batch_ai_pipeline,
+                  app_khach, mo_phong, ha_tang):
         print("saved:", build().save(OUT))

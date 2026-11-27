@@ -1,8 +1,9 @@
 import json
-import sqlite3
 from pathlib import Path
 
 import networkx as nx
+
+from app import db
 
 TABLES = ("applications", "wallet_transfers", "scam_reports")
 AI_TABLES = ("ai_report_analysis", "ai_entity_decisions", "ai_clusters")
@@ -10,15 +11,8 @@ AI_TABLES = ("ai_report_analysis", "ai_entity_decisions", "ai_clusters")
 
 class GraphStore:
     def __init__(self, database: str | Path, *, read_only: bool = False) -> None:
-        if read_only:
-            path = Path(database).resolve()
-            if not path.is_file():
-                raise FileNotFoundError(path)
-            self.connection = sqlite3.connect(path.as_uri() + "?mode=ro", uri=True)
-        else:
-            self.connection = sqlite3.connect(database)
-        self.connection.row_factory = sqlite3.Row
-        self.connection.execute("PRAGMA foreign_keys = ON")
+        # PostgreSQL: "database" kiểu cũ (đường dẫn) → 1 schema riêng (xem app/db.py). Khoá ngoại Postgres luôn bật.
+        self.connection = db.connect(database, read_only=read_only)   # chỉ đọc + chưa có → FileNotFoundError như cũ
         if read_only:
             return
         self.connection.executescript("""
@@ -119,7 +113,7 @@ class GraphStore:
         self.application(app_id)
         row = self.connection.execute(
             "SELECT COUNT(*) AS total_transfers, "
-            "COALESCE(SUM(json_extract(payload, '$.amount')), 0) AS total_amount "
+            "COALESCE(SUM((payload::jsonb->>'amount')::numeric), 0)::bigint AS total_amount "
             "FROM edges WHERE source = ? AND kind = 'SENT_TO'", ("app:" + app_id,),
         ).fetchone()
         return dict(row)

@@ -34,7 +34,7 @@
       "id": "p2",
       "type": "process",
       "label": "Dữ liệu và cảnh báo có sẵn",
-      "explain": "Demo: gen_data.py sinh CSV; build.py chạy Engine theo thời gian và ghi thienla.db. Engine + mock_ai.py dựng cảnh báo/kết luận mẫu bằng luật, không gọi LLM. Đây là dữ liệu mô phỏng; chưa có kết nối thật tới ngân hàng, ví hay SIMO.",
+      "explain": "Demo: gen_data.py sinh CSV; build.py chạy Engine theo thời gian và ghi PostgreSQL (schema public). Engine + mock_ai.py dựng cảnh báo/kết luận mẫu bằng luật, không gọi LLM. Đây là dữ liệu mô phỏng; chưa có kết nối thật tới ngân hàng, ví hay SIMO.",
       "step": 1,
       "color": "",
       "x": 60,

@@ -1,7 +1,7 @@
 # Nền tảng Agent
 
 Tài liệu này mô tả BaseAgent và controller chung. Phần kế thừa cho điều tra đã
-có workflow gọi tool, graph SQLite và client Gemini; xem
+có workflow gọi tool, graph PostgreSQL (schema `graph`) và client Gemini; xem
 [Agent điều tra](investigation_agent.md). Lá chắn, tạo cụm, sàng lọc, xác thực
 và giao diện nghiệp vụ chưa triển khai.
 

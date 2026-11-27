@@ -1,7 +1,7 @@
 from fastapi import HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
-from app.security import COOKIE, TTL, check_password, make_token
+from app.security import COOKIE, DEMO_AUTOFILL, TTL, check_password, make_token
 
 
 class LoginIn(BaseModel):
@@ -26,4 +26,7 @@ def register(app):
 
     @app.get("/api/me", tags=["auth"])
     def me(request: Request):
-        return {"auth_required": bool(policy.password), "logged_in": policy.valid_session(request)}
+        out = {"auth_required": bool(policy.password), "logged_in": policy.valid_session(request)}
+        if DEMO_AUTOFILL:   # chế độ trình diễn: giao diện tự đăng nhập
+            out["demo_password"] = policy.password
+        return out

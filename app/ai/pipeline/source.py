@@ -3,13 +3,14 @@ import csv
 import hashlib
 import json
 import re
-import sqlite3
 from pathlib import Path
+
+from app import db
 
 
 def select_groups(connection, request):
     rows = connection.execute(
-        "SELECT cid,app_ids,priority,signals FROM alerts WHERE latest=1 AND cid IS NOT NULL "
+        "SELECT cid,app_ids,priority,signals FROM alerts WHERE latest AND cid IS NOT NULL "
         "ORDER BY priority DESC,cid,alert_id"
     ).fetchall()
     eligible, seen = [], set()
@@ -62,17 +63,17 @@ def select_reports(connection, groups, limit):
 def export_backend(database, directory, request):
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=False)
-    source = Path(database).resolve()
     counts, hashes = {}, {}
-    with sqlite3.connect(source.as_uri() + "?mode=ro", uri=True) as connection:
-        connection.row_factory = sqlite3.Row
-        connection.execute("BEGIN")
+    connection = db.connect(database, read_only=True)
+    try:
+        # 1 ảnh chụp nhất quán cho toàn bộ lần xuất (thay cho BEGIN trên file SQLite chỉ đọc)
+        connection.execute("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY")
         groups, eligible = select_groups(connection, request)
         report_ids = select_reports(connection, groups, request.report_limit)
         for table, output, excluded in (("apps", "applications", {"signals"}),
                                         ("transfers", "wallet_transfers", set()),
                                         ("reports", "scam_reports", {"analysis"})):
-            columns = [row[1] for row in connection.execute(f"PRAGMA table_info({table})") if row[1] not in excluded]
+            columns = [name for name in db.table_columns(connection, table) if name not in excluded]
             if not columns or any(not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name) for name in columns):
                 raise ValueError("Unexpected backend source schema")
             path = directory / (output + ".csv")
@@ -89,6 +90,9 @@ def export_backend(database, directory, request):
                 for chunk in iter(lambda: stream.read(1024 * 1024), b""):
                     digest.update(chunk)
             hashes[output] = digest.hexdigest()
+        connection.execute("COMMIT")
+    finally:
+        connection.close()
     return {"counts": counts, "source_hashes": hashes, "groups": groups, "report_ids": report_ids,
             "eligible_clusters": eligible, "selection": "priority_and_signal_diversity_without_labels",
             "time_scope": "complete_backend_snapshot_not_historical_alert_replay"}

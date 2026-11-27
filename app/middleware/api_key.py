@@ -13,7 +13,8 @@ class ServiceKeyMiddleware:
         self.web_policy = web_policy
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send):
-        if scope["type"] == "http" and scope["path"].startswith("/api/"):
+        # /api/khach/* có đăng nhập riêng của khách (SĐT + PIN) — không đòi key dịch vụ
+        if scope["type"] == "http" and scope["path"].startswith("/api/") and not scope["path"].startswith("/api/khach/"):
             if self.web_policy and self.web_policy.password:
                 request = Request(scope)
                 if self.web_policy.public_api(scope["path"]) or self.web_policy.valid_session(request):

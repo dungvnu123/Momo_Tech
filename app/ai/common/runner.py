@@ -1,11 +1,11 @@
 import asyncio
 import hashlib
 import json
-import sqlite3
 from pathlib import Path
 
 from pydantic import ValidationError
 
+from app import db
 from app.services.tool_llm import ToolMessage
 
 
@@ -18,16 +18,15 @@ class StructuredRunner:
         self.client, self.timeout = client, timeout
         self.cache_path = Path(cache_path) if cache_path else None
         self.cache_hits = self.model_calls = 0
-        if self.cache_path:
-            self.cache_path.parent.mkdir(parents=True, exist_ok=True)
-            with sqlite3.connect(self.cache_path) as connection:
-                connection.execute("CREATE TABLE IF NOT EXISTS responses (key TEXT PRIMARY KEY, payload TEXT NOT NULL)")
+        self._db = None
+        if self.cache_path:   # PostgreSQL: 1 kết nối tự commit cho cả runner (schema theo đường dẫn cache — xem app/db.py)
+            self._db = db.connect(self.cache_path, autocommit=True)
+            self._db.execute("CREATE TABLE IF NOT EXISTS responses (key TEXT PRIMARY KEY, payload TEXT NOT NULL)")
 
     def _cached(self, key):
-        if self.cache_path:
-            with sqlite3.connect(self.cache_path) as connection:
-                row = connection.execute("SELECT payload FROM responses WHERE key = ?", (key,)).fetchone()
-                return json.loads(row[0]) if row else None
+        if self._db:
+            row = self._db.execute("SELECT payload FROM responses WHERE key = ?", (key,)).fetchone()
+            return json.loads(row[0]) if row else None
 
     async def run(self, name, prompt, payload, output_type, validate):
         schema = output_type.model_json_schema()
@@ -40,8 +39,7 @@ class StructuredRunner:
                 result = output_type.model_validate(cached)
                 validate(result)
             except (ValidationError, ValueError):
-                with sqlite3.connect(self.cache_path) as connection:
-                    connection.execute("DELETE FROM responses WHERE key=?", (key,))
+                self._db.execute("DELETE FROM responses WHERE key=?", (key,))
             else:
                 self.cache_hits += 1
                 return result
@@ -72,7 +70,6 @@ class StructuredRunner:
                                     "grounding_error": str(error) if not isinstance(error, ValidationError) else None})),
                 ])
                 continue
-            if self.cache_path:
-                with sqlite3.connect(self.cache_path) as connection:
-                    connection.execute("INSERT OR REPLACE INTO responses VALUES (?, ?)", (key, result.model_dump_json()))
+            if self._db:
+                self._db.execute("INSERT OR REPLACE INTO responses VALUES (?, ?)", (key, result.model_dump_json()))
             return result

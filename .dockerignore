@@ -1,0 +1,9 @@
+.venv
+data
+data_seed*
+*.db
+.env
+.git
+__pycache__
+docs/*.docx
+docs/tools

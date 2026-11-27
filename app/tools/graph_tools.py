@@ -1,4 +1,4 @@
-import sqlite3
+from app import db
 from pathlib import Path
 
 from pydantic import ValidationError
@@ -44,7 +44,7 @@ class GraphTools:
             return ToolResponse(ok=True, tool=name, data=data).model_dump(exclude_none=True)
         except KeyError:
             return self._error(name, "not_found", "Requested object was not found")
-        except (FileNotFoundError, sqlite3.Error):
+        except (FileNotFoundError, db.Error):
             return self._error(name, "storage_unavailable", "Graph database is unavailable")
         except (ValueError, TypeError):
             return self._error(name, "invalid_data", "Stored data could not be read")

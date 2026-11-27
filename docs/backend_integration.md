@@ -11,6 +11,14 @@ mà file chưa tồn tại sẽ báo lỗi.
 | `POST /api/transfer/check` | Đọc giao dịch theo ID, tạo `TransferCheck` | Giữ decision, reasons và message_for_customer |
 | `GET /api/alerts/{aid}/investigate` | `InvestigationAgent` với `BackendAgentTools` | SSE step/case; lưu kết luận nếu Agent hoàn thành |
 
+| `POST /api/khach/transfer` (app ví khách) | `BackendAI.check_transfer` qua `khach.ai_transfer` | Gemini quyết định; luật chỉ được nâng mức; thêm `risk_score` 0–100, `latency_ms`, `mode` |
+| `POST /api/khach/report/{id}` (app ví khách) | `BackendAI.analyze_report` | Tin từ kênh chính thức đã xác thực không gọi AI |
+
+Chưa cấu hình Gemini (`LLM_API_KEY` trống) → `BackendAI` tự rơi về bản luật
+(`backend/mock_ai.py`) cho cả 3 hàm `analyze_report` / `check_transfer` /
+`investigate`, ghi `mode = "luật (chưa cấu hình AI)"`. Riêng `POST /api/investigations`
+(đọc graph) vẫn trả `503`.
+
 `backend/integration.py` chỉ chuyển đổi hợp đồng. Các prompt, validation và
 vòng lặp model/tool vẫn ở module AI và Agent hiện có. `backend/http/` chia theo
 chức năng để debug từng API; không đặt nghiệp vụ AI vào middleware.
@@ -34,9 +42,9 @@ chỉ dùng ở `/api/metrics`, không đưa vào Agent hay tool.
 
 ## Cấu hình và giới hạn
 
-- `THIENLA_DB`: SQLite nghiệp vụ, mặc định `thienla.db`.
+- `THIENLA_DB`: tên dữ liệu nghiệp vụ, mặc định `thienla.db` → schema `public` trong PostgreSQL (xem `app/db.py`).
 - `THIENLA_DATA`: thư mục CSV và đáp án cho trang đánh giá.
-- `GRAPH_DATABASE`: SQLite graph cho API điều tra độc lập; build từ cùng CSV.
+- `GRAPH_DATABASE`: graph PostgreSQL cho API điều tra độc lập; build từ cùng CSV.
 - `LLM_API_KEY`, `LLM_MODEL_NAME`: cấu hình Gemini, không commit `.env`.
 - `APP_API_KEY`: xác thực ứng dụng gọi API bằng `X-API-Key`.
 - `THIENLA_PASSWORD`, `THIENLA_SECRET`: bật đăng nhập đội rủi ro bằng cookie
@@ -100,3 +108,20 @@ Schema kết quả dùng chung ở `agents/investigation/schemas.py`; vòng lặ
 thuộc InvestigationAgent kế thừa BaseAgent. Khi gửi schema cho Gemini, bỏ
 giới hạn độ dài mảng trong schema provider để tránh vượt giới hạn bộ giải mã;
 Pydantic tiếp tục kiểm tra toàn bộ giới hạn và dẫn nguồn ở phía ứng dụng.
+
+## Hợp đồng `TransferCheck` — tín hiệu backend gửi cho AI
+
+Backend (`build_ctx` trong `app/khach.py`, `transfer_ctx` trong `backend/http/transfer.py`) dựng ngữ cảnh,
+`BackendAI.check_transfer` chuyển thành `TransferCheck` (`app/ai/transfer/schemas.py`, `extra="forbid"`).
+Trường mới đều tuỳ chọn — thiếu thì coi như không có tín hiệu.
+
+| Trường | Nguồn backend | Ý nghĩa |
+|---|---|---|
+| `recipient_ring_senders` | bảng `ring_accounts` (dựng ở `build.py` từ `cases`) | Số hồ sơ vay trong 1 vụ đường dây **đã điều tra** từng chuyển tiền (khác tên) cho người nhận này; > 0 cho phép hold |
+| `share_of_balance` | số tiền / số dư ví khách | 0–1; không gửi số dư tuyệt đối |
+| `note_tags` | `mock_ai.note_tags(nội dung CK)` | `fee` / `debt_collection` / `urgent` — **chỉ gửi nhãn**, không gửi chữ khách gõ (test `test_transfer_uses_real_service_and_maps_context` chặn rò dữ liệu riêng) |
+| `customer_says_coached` | câu hỏi dừng lại trên app khách | Khách xác nhận có người hướng dẫn chuyển; cho phép hold |
+
+Quy tắc hold của `TransferService`: chỉ khi có SIMO, tin báo người nhận, `recipient_ring_senders > 0`
+hoặc `customer_says_coached`. Thêm tín hiệu mới: thêm trường vào `TransferCheck` → điền ở `BackendAI.check_transfer`
+→ mô tả trong `app/ai/transfer/prompt.md` → nếu tín hiệu đủ mạnh để hold thì thêm vào `validate` trong `transfer/service.py`.

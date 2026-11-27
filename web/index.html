@@ -21,6 +21,7 @@
     <button data-tab="transfer">Chuyển tiền</button>
     <button data-tab="net">Lưới &amp; Thám tử</button>
     <a href="flows/" target="_blank" rel="noopener">Luồng ↗</a>
+    <a href="vi/" target="_blank" rel="noopener">App khách ↗</a>
   </nav>
   <span id="mode" class="mode"></span>
   <button id="logout" class="chip" hidden>Đăng xuất</button>
@@ -115,6 +116,18 @@
         <input id="f-q" type="search" placeholder="Tìm mã cụm / hồ sơ">
         <select id="f-sort"><option value="priority">Ưu tiên cao nhất</option><option value="time">Mới nhất</option><option value="confidence">Tin cậy cao nhất</option><option value="size">Cụm lớn nhất</option></select>
       </div>
+    </div>
+    <div class="card sim">
+      <div class="tb-row">
+        <div><h2>Hoạt động trực tiếp <small class="muted">(mô phỏng)</small></h2>
+          <p class="muted">Tự sinh khoản vay + chuyển tiền ngẫu nhiên — phần lớn bình thường, một phần là lừa. Mọi giao dịch đi qua đúng bộ kiểm tra của app ví.</p></div>
+        <div class="live">
+          <select id="sim-speed" title="Nhịp sinh sự kiện"><option value="1">1 giây/sự kiện</option><option value="2" selected>2 giây/sự kiện</option><option value="5">5 giây/sự kiện</option></select>
+          <button id="sim-btn" class="btn ghost">▶ Bật mô phỏng</button>
+        </div>
+      </div>
+      <div id="sim-stats" class="sim-stats"></div>
+      <ol id="sim-feed" class="sim-feed"></ol>
     </div>
     <div class="net">
       <aside class="card side">
