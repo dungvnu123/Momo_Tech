@@ -227,7 +227,7 @@ thien-la/
 ├── gen_data.py · build.py
 ├── app/  main.py · engine.py · security.py · middleware/ · backend/ · ai/ · agents/ · graph/ · tools/
 ├── web/  index.html · app.js · style.css
-├── flows/build_flows.py · flows/backend_agent.py → docs/flows/*.json  (7 luồng trình chiếu)
+├── flows/build_flows.py · flows/backend_agent.py · flows/batch_ai.py → docs/flows/*.json  (8 luồng trình chiếu)
 └── docs/ system_design.md · Thien_La_gioi_thieu.docx
 ```
 

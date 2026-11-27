@@ -17,7 +17,7 @@ app/
 │   ├── triage/       # schemas.py, service.py, prompt.md, features.py
 │   ├── transfer/     # schemas.py, service.py, prompt.md
 │   ├── common/       # schema nền, runner/cache, kiểm tra ID dùng chung
-│   ├── pipeline/     # reports.py, entities.py, triage.py
+│   ├── pipeline/     # source, enrichment, triage, investigations, runner và schemas
 │   ├── evaluation/   # từng giai đoạn chấm điểm và runner tổng hợp báo cáo
 │   └── service.py    # ghép các service, giữ giao diện gọi chung
 ├── controller/

@@ -109,6 +109,12 @@ Agent điều tra và cấu hình Gemini: [docs/investigation_agent.md](docs/inv
 
 Toàn bộ module AI và cách kiểm tra: [docs/ai_pipeline.md](docs/ai_pipeline.md).
 
+Pipeline thử theo lô từ backend, bổ sung graph bằng AI rồi điều tra:
+[docs/ai_batch_pipeline.md](docs/ai_batch_pipeline.md). API
+`POST /api/ai/pipeline/run` và CLI `uv run python -m app.ai pipeline`
+chạy trên bản snapshot riêng, không thay kết quả đang phục vụ giao diện.
+Xem [Feature Flow của pipeline theo lô](http://127.0.0.1:4420/flows/#/thienla-ai-batch-pipeline).
+
 ```bash
 uv run python -m app.agents.investigation --app-id HS00001 --demo --stream
 ```

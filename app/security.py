@@ -23,12 +23,12 @@ COOKIE, TTL = "tl_session", 8 * 3600
 
 # Cần đăng nhập: mọi thứ chạm tới dữ liệu hồ sơ. Công khai: Lá chắn (cho khách vay), tổng quan + chỉ số (chỉ số đếm tổng hợp).
 PROTECTED = ("/api/alerts", "/api/apps", "/api/transfer", "/api/live",
-             "/api/investigations", "/api/v1/agents", "/api/ai/entities", "/api/ai/triage", "/api/ai/transfer")
+             "/api/investigations", "/api/v1/agents", "/api/ai/entities", "/api/ai/triage", "/api/ai/transfer", "/api/ai/pipeline")
 PUBLIC_API = ("/api/login", "/api/logout", "/api/me", "/api/overview", "/api/metrics")
 # (tiền tố, số lượt, trong bao nhiêu giây) — khớp tiền tố đầu tiên
 LIMITS = [("/api/login", 5, 60), ("/api/shield/analyze", 30, 60), ("/api/ai/shield/analyze", 30, 60),
           ("/api/live", 6, 60), ("/investigate", 12, 60), ("/api/investigations", 12, 60),
-          ("/api/v1/agents/run", 12, 60), ("/api/ai/entities", 30, 60), ("/api/ai/triage", 30, 60),
+          ("/api/ai/pipeline/run", 2, 60), ("/api/v1/agents/run", 12, 60), ("/api/ai/entities", 30, 60), ("/api/ai/triage", 30, 60),
           ("/api/ai/transfer/check", 60, 60), ("/api/transfer/check", 60, 60), ("/api/", 600, 60)]
 _hits: dict = defaultdict(deque)
 
@@ -65,6 +65,8 @@ def client_ip(req: Request, *, behind_proxy=None) -> str:
 def rate_limited(req: Request, *, hits=None, behind_proxy=None) -> bool:
     path = req.url.path
     for prefix, n, win in LIMITS:
+        if prefix == "/api/ai/pipeline/run" and path != prefix:
+            continue  # Reading /pipeline/runs/{id} must not consume an expensive-run slot.
         if prefix in path:
             buckets = _hits if hits is None else hits
             q, now = buckets[(client_ip(req, behind_proxy=behind_proxy), prefix)], time.monotonic()
