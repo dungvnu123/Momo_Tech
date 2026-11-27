@@ -5,9 +5,11 @@ description = "Thiên La — nền tảng Agent truy vết gian lận tín dụn
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.165.0",
+    "google-genai>=3.6.1",
     "langgraph>=1.2.24",
     "networkx>=3.7",
     "pydantic>=2.14.4",
+    "python-dotenv>=1.2.4",
     "uvicorn>=0.54.0",
 ]
 

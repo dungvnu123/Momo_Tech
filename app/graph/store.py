@@ -5,13 +5,22 @@ from pathlib import Path
 import networkx as nx
 
 TABLES = ("applications", "wallet_transfers", "scam_reports")
+AI_TABLES = ("ai_report_analysis", "ai_entity_decisions", "ai_clusters")
 
 
 class GraphStore:
-    def __init__(self, database: str | Path) -> None:
-        self.connection = sqlite3.connect(database)
+    def __init__(self, database: str | Path, *, read_only: bool = False) -> None:
+        if read_only:
+            path = Path(database).resolve()
+            if not path.is_file():
+                raise FileNotFoundError(path)
+            self.connection = sqlite3.connect(path.as_uri() + "?mode=ro", uri=True)
+        else:
+            self.connection = sqlite3.connect(database)
         self.connection.row_factory = sqlite3.Row
         self.connection.execute("PRAGMA foreign_keys = ON")
+        if read_only:
+            return
         self.connection.executescript("""
             CREATE TABLE IF NOT EXISTS applications (
                 id TEXT PRIMARY KEY, wallet TEXT NOT NULL, payload TEXT NOT NULL
@@ -56,6 +65,71 @@ class GraphStore:
         for row in self.connection.execute(f"SELECT payload FROM {table} ORDER BY id"):
             yield json.loads(row["payload"])
 
+    def application(self, app_id: str) -> dict:
+        row = self.connection.execute(
+            "SELECT payload FROM applications WHERE id = ?", (app_id,)
+        ).fetchone()
+        if row is None:
+            raise KeyError(app_id)
+        return json.loads(row["payload"])
+
+    def node(self, node_id: str) -> dict:
+        row = self.connection.execute("SELECT * FROM nodes WHERE id = ?", (node_id,)).fetchone()
+        if row is None:
+            raise KeyError(node_id)
+        return {"id": row["id"], "kind": row["kind"], "attributes": json.loads(row["payload"])}
+
+    def edge(self, edge_id: str) -> dict:
+        row = self.connection.execute("SELECT * FROM edges WHERE id = ?", (edge_id,)).fetchone()
+        if row is None:
+            raise KeyError(edge_id)
+        return self._edge_data(row)
+
+    @staticmethod
+    def _edge_data(row) -> dict:
+        result = dict(row)
+        result["attributes"] = json.loads(result.pop("payload"))
+        return result
+
+    def related_edges(
+        self, node_id: str, *, edge_type: str | None = None, direction: str = "both",
+        limit: int = 50, offset: int = 0,
+    ) -> dict:
+        if type(limit) is not int or not 1 <= limit <= 50 or type(offset) is not int or offset < 0:
+            raise ValueError("Invalid page bounds")
+        clauses = {"incoming": "target = ?", "outgoing": "source = ?",
+                   "both": "(source = ? OR target = ?)"}
+        if direction not in clauses:
+            raise ValueError("Invalid direction")
+        self.node(node_id)
+        where = clauses[direction]
+        parameters = [node_id, node_id] if direction == "both" else [node_id]
+        if edge_type is not None:
+            where += " AND kind = ?"
+            parameters.append(edge_type)
+        rows = self.connection.execute(
+            f"SELECT * FROM edges WHERE {where} ORDER BY id LIMIT ? OFFSET ?",
+            (*parameters, limit + 1, offset),
+        ).fetchall()
+        return {"edges": [self._edge_data(row) for row in rows[:limit]],
+                "truncated": len(rows) > limit,
+                "next_offset": offset + limit if len(rows) > limit else None}
+
+    def money_summary(self, app_id: str) -> dict:
+        self.application(app_id)
+        row = self.connection.execute(
+            "SELECT COUNT(*) AS total_transfers, "
+            "COALESCE(SUM(json_extract(payload, '$.amount')), 0) AS total_amount "
+            "FROM edges WHERE source = ? AND kind = 'SENT_TO'", ("app:" + app_id,),
+        ).fetchone()
+        return dict(row)
+
+    def application_transfers(self, app_id: str):
+        for row in self.connection.execute(
+            "SELECT * FROM edges WHERE source = ? AND kind = 'SENT_TO' ORDER BY id", ("app:" + app_id,),
+        ):
+            yield self._edge_data(row)
+
     def source_record(self, edge_id: str) -> dict:
         edge = self.connection.execute(
             "SELECT source_table, source_id FROM edges WHERE id = ?", (edge_id,)
@@ -63,7 +137,7 @@ class GraphStore:
         if edge is None:
             raise KeyError(edge_id)
         table = edge["source_table"]
-        if table not in TABLES:
+        if table not in (*TABLES, *AI_TABLES):
             raise ValueError("Unknown source table")
         row = self.connection.execute(
             f"SELECT payload FROM {table} WHERE id = ?", (edge["source_id"],)

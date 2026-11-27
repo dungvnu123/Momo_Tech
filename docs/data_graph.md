@@ -1,6 +1,7 @@
 # Graph dữ liệu
 
-Module độc lập tại `app/graph/`, không gọi LLM và chưa nối vào Agent hoặc API.
+Module độc lập tại `app/graph/`; phần dựng graph cơ sở không gọi LLM.
+Agent truy cập qua tool, pipeline AI bổ sung nhận định trong `AIStore`.
 SQLite lưu toàn bộ dữ liệu nguồn và quan hệ. NetworkX chỉ tải graph con khi
 tra cứu, tránh nạp toàn bộ graph của 200.000 hồ sơ vào RAM.
 
@@ -59,7 +60,8 @@ ra hồ sơ của người nhận qua cạnh `HAS_WALLET`.
 
 Địa chỉ, eKYC và các trường hồ sơ khác được giữ trong dữ liệu nguồn. Không tạo
 cạnh chung địa chỉ hoặc chung giá trị eKYC. Không hợp nhất người theo tên giống
-nhau. Chưa trích tài khoản/hotline/tên miền từ raw text và chưa tạo `MENTIONS`.
+nhau ở bước dựng graph cơ sở. Pipeline AI riêng trích tài khoản/hotline/tên
+miền từ raw text, kiểm tra nguồn và tạo `MENTIONS`; xem [pipeline AI](ai_pipeline.md).
 Không đọc `ground_truth.json` hay nhãn gian lận.
 
 Bộ sinh dữ liệu cũ có giao dịch ghi loại ví nhưng số đích không phải SĐT, hoặc
@@ -112,6 +114,6 @@ uv run python -m unittest discover -s tests -v
 | Bộ sinh mới trên `dev_nghi` | 200.000 | 76.953 | 105 | 0 |
 
 Cả hai dựng graph thành công. Đây là kiểm tra tính toàn vẹn dữ liệu và quan
-hệ, chưa phải kết quả phát hiện gian lận. Bộ kiểm thử có 34 test cho Agent và
-graph, gồm truy ngược nguồn, nhiều giao dịch cùng cặp node, rollback khi dựng
+hệ, chưa phải kết quả phát hiện gian lận. Bộ kiểm thử của Agent và
+graph gồm truy ngược nguồn, nhiều giao dịch cùng cặp node, rollback khi dựng
 lỗi, dữ liệu người nhận mâu thuẫn và giới hạn kích thước graph con.

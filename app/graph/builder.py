@@ -4,7 +4,7 @@ from datetime import datetime
 from pathlib import Path
 
 from . import normalize
-from .store import GraphStore, TABLES
+from .store import AI_TABLES, GraphStore, TABLES
 
 REQUIRED = {
     "applications": {"app_id", "phone", "device_id", "applied_at", "disbursed_at", "amount"},
@@ -154,6 +154,9 @@ def build_graph(data_dir: str | Path, database: str | Path, *, replace: bool = F
                     raise FileExistsError("Graph database already contains data; use replace=True to rebuild")
                 for table in ("edges", "nodes", "quality_issues", *TABLES):
                     store.connection.execute(f"DELETE FROM {table}")
+                for table in (*AI_TABLES, "ai_entity_members"):
+                    if store.connection.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table,)).fetchone():
+                        store.connection.execute(f"DELETE FROM {table}")
             _import_csv(store, directory)
             writer = _Writer(store)
             _applications(store, writer)

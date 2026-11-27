@@ -2,15 +2,39 @@ from fastapi import FastAPI
 
 from app.agents.default import DefaultAgent
 from app.agents.manager import AgentManager
+from app.agents.investigation import InvestigationAgent
 from app.controller.agents import router as agent_router
+from app.controller.investigations import router as investigation_router
+from app.controller.ai import router as ai_router
+from app.ai.service import AIService
+from app.services.gemini_client import configured_tool_client
 from app.services.llm_client import LLMClient, UnconfiguredLLMClient
+from app.core.config import configured_service_key, load_environment
+from app.core.http import unhandled_error
+from app.core.logging import configure_request_logging
+from app.core.openapi import configure_service_security
+from app.middleware import configure_middleware
 
 
-def create_app(llm_client: LLMClient | None = None) -> FastAPI:
+def create_app(llm_client: LLMClient | None = None, *, tool_llm_client=None,
+               graph_database="data/graph.db", ai_cache=None,
+               service_api_key: str | None = None) -> FastAPI:
+    load_environment()
+    configure_request_logging()
     application = FastAPI(title="Thiên La Agent Service", version="0.1.0")
+    key = configured_service_key() if service_api_key is None else service_api_key
+    configure_middleware(application, service_api_key=key)
+    application.add_exception_handler(Exception, unhandled_error)
+    if key:
+        configure_service_security(application)
     client = llm_client if llm_client is not None else UnconfiguredLLMClient()
     application.state.agent_manager = AgentManager([DefaultAgent(client)])
     application.include_router(agent_router)
+    tool_client = tool_llm_client if tool_llm_client is not None else configured_tool_client()
+    application.state.investigation_agent = InvestigationAgent(tool_client, database=graph_database)
+    application.include_router(investigation_router)
+    application.state.ai_service = AIService(tool_client, cache_path=ai_cache)
+    application.include_router(ai_router)
 
     @application.get("/health")
     async def health_check() -> dict[str, str]:

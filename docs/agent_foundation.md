@@ -1,7 +1,9 @@
 # Nền tảng Agent
 
-Phần hiện tại chỉ xây nền tảng dùng chung và controller. Chưa triển khai Lá chắn,
-Lưới, sàng lọc, Thám tử, tool nghiệp vụ, database, xác thực hoặc giao diện.
+Tài liệu này mô tả BaseAgent và controller chung. Phần kế thừa cho điều tra đã
+có workflow gọi tool, graph SQLite và client Gemini; xem
+[Agent điều tra](investigation_agent.md). Lá chắn, tạo cụm, sàng lọc, xác thực
+và giao diện nghiệp vụ chưa triển khai.
 
 ## Cấu trúc và luồng xử lý
 

@@ -1,5 +1,6 @@
 import ipaddress
 import re
+import unicodedata
 
 
 def phone(value: str) -> str:
@@ -36,3 +37,16 @@ def flag(value: str) -> bool:
     if value.lower() in {"false", "0", ""}:
         return False
     raise ValueError("Invalid boolean value")
+
+
+def name_match(first: str, second: str) -> bool | None:
+    if not first.strip() or not second.strip():
+        return None
+
+    def normalize(value):
+        value = value.casefold().replace("đ", "d")
+        value = "".join(character for character in unicodedata.normalize("NFD", value)
+                        if not unicodedata.combining(character))
+        return " ".join(value.split())
+
+    return normalize(first) == normalize(second)
