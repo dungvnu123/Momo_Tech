@@ -9,6 +9,7 @@ from google.genai import errors, types
 
 from .llm_client import LLMNotConfiguredError
 from .tool_llm import ModelTurn, ToolCall, ToolMessage, UnconfiguredToolLLMClient
+from .gemini_schema import tool_schema
 from app.core.config import load_environment
 
 
@@ -60,7 +61,7 @@ class GeminiToolClient:
         self.ensure_ready()
         system, contents = to_gemini_messages(messages)
         declarations = [types.FunctionDeclaration(name=tool["name"], description=tool["description"],
-                                                 parameters_json_schema=tool["parameters"]) for tool in tools]
+                                                 parameters_json_schema=tool_schema(tool["parameters"])) for tool in tools]
         config = types.GenerateContentConfig(
             system_instruction=system or None, max_output_tokens=4096,
             tools=[types.Tool(function_declarations=declarations)] if declarations else None,

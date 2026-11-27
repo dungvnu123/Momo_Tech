@@ -20,10 +20,23 @@ class Evidence(BaseModel):
     source: str = Field(min_length=1, max_length=128, description="tool_call_id from a successful tool result in this run; not an edge ID")
 
 
+class TransactionAssessment(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    transfer_id: AppID
+    recommendation: Literal["allow", "warn", "hold", "review"] = Field(
+        description="Recommendation for human review only. Hold needs a recorded SIMO/recipient warning; it does not identify the borrower as an offender.")
+    reason: Text
+    evidence: list[Evidence] = Field(min_length=1, max_length=10)
+
+
 class CaseSubmission(BaseModel):
     model_config = ConfigDict(extra="forbid")
     verdict: Literal["fraud_ring", "victims", "benign", "inconclusive"]
-    confidence: float = Field(ge=0, le=1, allow_inf_nan=False)
+    confidence: float = Field(ge=0, le=1, allow_inf_nan=False,
+                             description="Model's uncalibrated confidence in this verdict, not probability the borrower is a criminal. No fixed default for inconclusive.")
+    summary: Text | None = None
+    missing_information: list[Text] = Field(default_factory=list, max_length=10)
+    transaction_assessments: list[TransactionAssessment] = Field(default_factory=list, max_length=50)
     members: list[AppID] = Field(default_factory=list, max_length=100,
                                 description="Nonempty application IDs for suspected offenders when verdict=fraud_ring. Empty for all other verdicts. No app: prefix.")
     victims: list[AppID] = Field(default_factory=list, max_length=100,
