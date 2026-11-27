@@ -48,7 +48,8 @@ DUONG = ["Láng Hạ", "Nguyễn Trãi", "Lê Lợi", "Trần Hưng Đạo", "Ha
 BANKS = ["VCB", "TCB", "MBB", "ACB", "VPB", "BIDV", "CTG", "TPB", "STB", "VIB"]
 CARRIER = {"03": "Viettel", "09": "Viettel", "07": "Mobifone", "08": "Vinaphone"}
 PURPOSE = ["Tiêu dùng", "Mua điện thoại", "Sửa nhà", "Học phí", "Khám chữa bệnh", "Đóng tiền trọ"]
-D0, D1 = date(2026, 8, 1), date(2026, 11, 25)
+D0, D1 = date(2026, 6, 1), date(2026, 11, 25)   # từ tháng 6 → kỳ trả đầu của phần lớn khoản vay rơi vào trong cửa sổ
+TERM_MONTHS, RATE_YEAR = 3, 0.36   # kỳ hạn 3 tháng, lãi 36%/năm — như hợp đồng mẫu sản phẩm thật
 
 used_phones, used_accts, used_cccd, used_dev, used_ip = set(), set(), set(), set(), set()
 
@@ -162,10 +163,14 @@ def add_app(p, addr, addr_style, dev, refs, day, status, dpd, tech=None, amount=
     t = at(day, *h)
     tech = {**normal_tech(addr["tinh"] if isinstance(addr, dict) else "Hà Nội"), **(tech or {})}  # ghi đè từng phần
     app_id = f"HS{len(apps) + 1:05d}"
-    disbursed = t + timedelta(minutes=rng.randint(3, 30)) if status == "DISBURSED" else None
+    ekyc_done = t + timedelta(seconds=rng.randint(40, 240) * max(1, int(tech["ekyc_attempts"])))
+    decided = ekyc_done + timedelta(seconds=rng.randint(20, 600)) if status in ("DISBURSED", "REJECTED") else None
+    disbursed = decided + timedelta(minutes=rng.randint(1, 20)) if status == "DISBURSED" else None
     apps.append({
-        "app_id": app_id, "applied_at": t.isoformat(),
-        "disbursed_at": disbursed.isoformat() if disbursed else "",
+        "app_id": app_id, "applied_at": t.isoformat(), "ekyc_completed_at": ekyc_done.isoformat(timespec="seconds"),
+        "decided_at": decided.isoformat(timespec="seconds") if decided else "",
+        "decision": {"DISBURSED": "APPROVED", "REJECTED": "REJECTED"}.get(status, ""),
+        "disbursed_at": disbursed.isoformat(timespec="seconds") if disbursed else "",
         "full_name": p["full_name"], "dob": p["dob"], "cccd": p["cccd"],
         "phone": p["phone"],                     # = mã ví MoMo chính chủ, nơi nhận giải ngân
         "carrier": CARRIER[p["phone"][:2]],
@@ -174,7 +179,9 @@ def add_app(p, addr, addr_style, dev, refs, day, status, dpd, tech=None, amount=
         "ref1_name": refs[0][0], "ref1_relation": refs[0][1], "ref1_phone": refs[0][2],
         "ref2_name": refs[1][0], "ref2_relation": refs[1][1], "ref2_phone": refs[1][2],
         "amount": amount or rng.choice(range(1_000_000, 20_000_001, 500_000)),
-        "purpose": rng.choice(PURPOSE), "status": status, "dpd": dpd,
+        "purpose": rng.choice(PURPOSE), "term_months": TERM_MONTHS if status == "DISBURSED" else "",
+        "interest_rate_year": RATE_YEAR if status == "DISBURSED" else "", "status": status,
+        "_dpd_intent": dpd,   # hành vi trả nợ (nội bộ) → sinh lịch trả + các lần trả; KHÔNG ghi ra file
     })
 
     return app_id
@@ -189,8 +196,10 @@ def normal_status(day):
     r = rng.random()
     if r < 0.08:
         return "REJECTED", ""
-    if day > D1 - timedelta(days=3) or r < 0.12:
+    if day > D1 - timedelta(days=3):   # chỉ hồ sơ mấy ngày cuối mới còn chờ
         return "PENDING", ""
+    if r < 0.12:
+        return "REJECTED", ""
     return "DISBURSED", rng.choice([31, 45, 62]) if rng.random() < 0.06 else rng.choice([0, 0, 0, 0, 0, 3, 7])
 
 
@@ -215,7 +224,7 @@ for i in range(8):
     day = D1 - timedelta(days=rng.randint(0, 20)) if i < 6 else D1 - timedelta(days=rng.randint(0, 1))
     dev = a_devs[i % 2] if i in (1, 3, 6, 7) else device()   # 2 hồ sơ PENDING chỉ lộ qua thiết bị chung
     ring_a.append(add_app(p, addr, rng.randint(0, 3), dev, [rand_ref(), rand_ref()], day,
-                          "DISBURSED" if i < 6 else "PENDING", 0 if i < 6 else "",
+                          "DISBURSED" if i < 6 else "PENDING", 45 if i < 6 else "",   # bán ví rồi → không trả
                           tech={"wallet_age_days": rng.randint(60, 900)},   # ví cũ của người bán ví
                           amount=rng.choice([15_000_000, 18_000_000, 20_000_000])))
 truth["fraud_rings"].append({"ring": "A", "type": "rented_wallet",
@@ -265,8 +274,8 @@ for i in range(12):
             "device_os": "Android 12", "is_emulator": i % 4 != 0,   # 3/4 giả lập, 1/4 máy thật để lách
             "fill_time_sec": rng.randint(25, 70), "wallet_age_days": rng.randint(0, 6),
             "device_first_seen_hours": rng.randint(1, 48), "is_rooted_or_hooked": i % 4 != 0}
-    day = date(2026, 11, 3) + timedelta(days=rng.randint(0, 9))
-    st, dpd = ("DISBURSED", rng.choice([10, 14, 18])) if i < 9 else ("PENDING", "")
+    day = date(2026, 10, 3) + timedelta(days=rng.randint(0, 9))   # tháng 10 → kỳ trả đầu rơi trong cửa sổ
+    st, dpd = ("DISBURSED", 45) if i < 9 else ("PENDING", "")   # vay xong bỏ trốn → không trả kỳ nào
     ring_d.append(add_app(p, addr, rng.randint(0, 3), device(), [rand_ref(), rand_ref()], day, st, dpd,
                           tech=tech, h=(0, 5)))  # nộp lúc nửa đêm
 truth["fraud_rings"].append({"ring": "D", "type": "sim_farm_vpn",
@@ -296,7 +305,7 @@ ring_f = []
 for i in range(6):
     p = person()
     ring_f.append(add_app(p, address(), rng.choice([0, 0, 1]), f_devs[i % 2], [rand_ref(), rand_ref()],
-                          date(2026, 11, 14) + timedelta(days=rng.randint(0, 9)), "DISBURSED", rng.choice([0, 0, 9]),
+                          date(2026, 10, 14) + timedelta(days=rng.randint(0, 9)), "DISBURSED", 45,   # chủ ví không nhận nợ → không trả
                           tech={"wallet_age_days": rng.randint(300, 2000), "device_first_seen_hours": rng.randint(1, 6),
                                 "is_rooted_or_hooked": i != 0, "liveness_score": round(rng.uniform(0.80, 0.84), 3),
                                 "ekyc_attempts": rng.randint(2, 4), "ip_type": "residential"},
@@ -312,7 +321,7 @@ g_hotline = phone("07")
 ring_g = []
 for i in range(10):
     ring_g.append(add_app(person(), address(), rng.choice([0, 0, 1]), device(), [rand_ref(), rand_ref()],
-                          date(2026, 11, 18) + timedelta(days=rng.randint(0, 4)), "DISBURSED", 0,
+                          date(2026, 11, 18) + timedelta(days=rng.randint(0, 4)), "DISBURSED", 45,
                           tech={"wallet_age_days": rng.randint(120, 210)}, amount=rng.choice([10_000_000, 12_000_000, 15_000_000])))
 truth["fraud_rings"].append({"ring": "G", "type": "dormant_wallets",
                              "pattern": "10 ví nuôi sạch 4–7 tháng, tín hiệu kỹ thuật bình thường, vay cùng đợt 18–22/11, chuyển 90–100% trong 5–30 phút về 3 tài khoản gom; chỉ 1 tin báo vào ngày cuối",
@@ -515,6 +524,50 @@ for t in transfers:
     t["simo_flag"] = t["to_id"] in simo_hit or rng.random() < 0.0002   # ~0,02% cảnh báo nhầm
     t["to_is_merchant"] = t["to_id"] in merchant_ids
 
+# ── Vòng đời hồ sơ: phiên eKYC, lịch trả nợ, các lần trả ──────────────────────────────────
+# Quá hạn (DPD) KHÔNG còn là 1 con số chốt: tính tại từng thời điểm từ lịch trả + các lần trả.
+def add_months(d, k):
+    y, m = divmod(d.month - 1 + k, 12)
+    return date(d.year + y, m + 1, min(d.day, 28))
+
+
+fraud_all = set(ring_a + ring_b + ring_c + ring_d + ring_f + ring_g + lone)
+ekyc_sessions, schedule, repayments = [], [], []
+DATA_END = datetime(D1.year, D1.month, D1.day, 23, 59, 59)
+for a in apps:
+    t0, t1 = datetime.fromisoformat(a["applied_at"]), datetime.fromisoformat(a["ekyc_completed_at"])
+    n = int(a["ekyc_attempts"])
+    for k in range(1, n + 1):
+        passed = k == n
+        ekyc_sessions.append({"app_id": a["app_id"], "attempt_no": k,
+                              "ts": (t0 + (t1 - t0) * k / (n + 1)).isoformat(timespec="seconds"),
+                              "device_id": a["device_id"], "is_rooted_or_hooked": a["is_rooted_or_hooked"],
+                              "liveness_score": a["liveness_score"] if passed else round(rng.uniform(0.55, 0.79), 3),
+                              "result": "PASS" if passed else "FAIL"})
+    if a["status"] != "DISBURSED":
+        continue
+    d0, amt = datetime.fromisoformat(a["disbursed_at"]).date(), a["amount"]
+    intent = a["_dpd_intent"] or 0
+    # hành vi: 0 → trả đúng hạn; 1–29 → trả trễ ~intent ngày; ≥30 → không trả từ kỳ 1 (FPD), một phần khách thường trả kỳ 1 rồi bỏ
+    stop_after = None if intent < 30 else (1 if (rng.random() < 0.4 and a["app_id"] not in fraud_all) else 0)
+    principal = round(amt / TERM_MONTHS)
+    for k in range(1, TERM_MONTHS + 1):
+        due = add_months(d0, k)
+        interest = round(amt * RATE_YEAR * (add_months(d0, k) - add_months(d0, k - 1)).days / 365)
+        schedule.append({"app_id": a["app_id"], "term_no": k, "due_date": due.isoformat(), "principal_due": principal,
+                         "interest_due": interest, "total_due": principal + interest})
+        if stop_after is not None and k > stop_after:
+            continue
+        late = intent if 0 < intent < 30 else (rng.choice([1, 2]) if rng.random() < 0.1 else -rng.randint(0, 3))
+        paid_at = datetime(due.year, due.month, due.day, rng.randint(7, 22), rng.randint(0, 59)) + timedelta(days=late)
+        if paid_at > DATA_END:
+            continue   # chưa tới lúc trả trong cửa sổ dữ liệu
+        repayments.append({"payment_id": "", "app_id": a["app_id"], "term_no": k, "paid_at": paid_at.isoformat(timespec="seconds"),
+                           "amount": principal + interest, "channel": rng.choice(["Ví", "Ví", "Ví", "Chuyển khoản", "Tại điểm thu"])})
+repayments.sort(key=lambda r: r["paid_at"])
+for i, r in enumerate(repayments, 1):
+    r["payment_id"] = f"TT{i:07d}"
+
 # ── Tin báo lừa đảo (đầu Lá chắn) ───────────────────────────────────────────────────────
 def obfuscate(s):
     style = rng.randint(0, 3)
@@ -608,6 +661,11 @@ remap = {a["app_id"]: f"HS{i:05d}" for i, a in enumerate(sorted(apps, key=lambda
 for a in apps:
     a["app_id"] = remap[a["app_id"]]
 apps.sort(key=lambda a: a["app_id"])
+for lst in (ekyc_sessions, schedule, repayments):
+    for r in lst:
+        r["app_id"] = remap[r["app_id"]]
+ekyc_sessions.sort(key=lambda r: (r["app_id"], r["attempt_no"]))
+schedule.sort(key=lambda r: (r["app_id"], r["term_no"]))
 for g in truth["fraud_rings"] + truth["victims"] + truth["benign_groups"] + truth["undetectable"]:
     g["app_ids"] = sorted(remap[x] for x in g["app_ids"])
 transfers.sort(key=lambda t: t["created_at"])
@@ -629,8 +687,11 @@ def write_csv(name, rows, cols=None):
         w.writerows(rows)
 
 
-write_csv("applications.csv", apps)
+write_csv("applications.csv", apps, [k for k in apps[0] if not k.startswith("_")])
 write_csv("wallet_transfers.csv", transfers, [k for k in transfers[0] if not k.startswith("_")])   # _kind là đáp án, không ghi
+write_csv("ekyc_sessions.csv", ekyc_sessions)
+write_csv("repayment_schedule.csv", schedule)
+write_csv("repayments.csv", repayments)
 write_csv("scam_reports.csv", reports, ["report_id", "reported_at", "reporter_phone", "channel", "raw_text"])  # nhãn KHÔNG lọt vào đầu vào
 (OUT / "ground_truth.json").write_text(json.dumps(truth, ensure_ascii=False, indent=2), encoding="utf-8")
 
