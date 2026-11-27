@@ -59,7 +59,7 @@
       "id": "p4",
       "type": "process",
       "label": "Dữ liệu bên cho vay",
-      "explain": "Hồ sơ vay + tín hiệu kỹ thuật (IP, SIM, thiết bị, giả lập, thời gian điền đơn) + 77.227 lượt chuyển tiền sau giải ngân.",
+      "explain": "Hồ sơ vay + tín hiệu kỹ thuật (IP, SIM, thiết bị, giả lập, thời gian điền đơn) + phiên eKYC lúc vay + 76.953 lượt chuyển tiền sau giải ngân (kèm ngữ cảnh người nhận: danh bạ, lịch sử, SIMO).",
       "step": 3,
       "color": "",
       "x": null,
@@ -72,14 +72,14 @@
       "id": "p5",
       "type": "process",
       "label": "② Lưới",
-      "explain": "Đồ thị chỉ giữ điểm được dùng chung: 7.175 điểm nối 12.923 hồ sơ thành 4.386 cụm (đã đo). AI hợp nhất thực thể: 'Ng V. A, 12/5 P. Láng Hạ' = 'Nguyễn Văn A, số 12 ngõ 5 Láng Hạ'.",
+      "explain": "Đồ thị chỉ giữ điểm được dùng chung: 7.258 điểm nối 13.026 hồ sơ thành 4.405 cụm (đã đo). AI hợp nhất thực thể: 'Ng V. A, 12/5 P. Láng Hạ' = 'Nguyễn Văn A, số 12 ngõ 5 Láng Hạ'.",
       "step": 4,
       "color": "",
       "x": null,
       "y": null,
       "notes": [],
       "icon": "chart",
-      "badge": "4.386 cụm"
+      "badge": "4.405 cụm"
     },
     {
       "id": "p6",
@@ -227,7 +227,7 @@
     {
       "n": 4,
       "title": "Nếu chỉ dùng luật",
-      "body": "Gộp 4 luật phổ biến: bắt 38/42 gian lận nhưng gắn cờ 49.411 hồ sơ, và coi cả 8/8 nạn nhân là kẻ gian (đã đo).",
+      "body": "Gộp 5 luật phổ biến: bắt 54/58 gian lận nhưng gắn cờ 61.401 hồ sơ, và coi 23/28 nạn nhân là kẻ gian (đã đo).",
       "note": "Đội rủi ro ngập trong cảnh báo sai.",
       "note_type": "warn",
       "badge": "VẤN ĐỀ"
@@ -235,7 +235,7 @@
     {
       "n": 5,
       "title": "AI sàng lọc",
-      "body": "Từ 4.386 cụm, AI giữ lại vài chục cụm đáng điều tra.",
+      "body": "Từ 4.405 cụm, AI giữ lại vài chục cụm đáng điều tra.",
       "note": "",
       "note_type": "info",
       "badge": "AI"

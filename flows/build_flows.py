@@ -41,9 +41,9 @@ def kien_truc():
                                "(kể cả số viết lách '19o3 4567'), nhận ra tin người bị hại tự kể.")
     data = f.process("Dữ liệu bên cho vay", step=3, icon="database", badge="200.000 hồ sơ",
                      explain="Hồ sơ vay + tín hiệu kỹ thuật (IP, SIM, thiết bị, giả lập, thời gian điền đơn) "
-                             "+ 77.227 lượt chuyển tiền sau giải ngân.")
-    graph = f.process("② Lưới", step=4, icon="chart", badge="4.386 cụm",
-                      explain="Đồ thị chỉ giữ điểm được dùng chung: 7.175 điểm nối 12.923 hồ sơ thành 4.386 cụm (đã đo). "
+                             "+ phiên eKYC lúc vay + 76.953 lượt chuyển tiền sau giải ngân (kèm ngữ cảnh người nhận: danh bạ, lịch sử, SIMO).")
+    graph = f.process("② Lưới", step=4, icon="chart", badge="4.405 cụm",
+                      explain="Đồ thị chỉ giữ điểm được dùng chung: 7.258 điểm nối 13.026 hồ sơ thành 4.405 cụm (đã đo). "
                               "AI hợp nhất thực thể: 'Ng V. A, 12/5 P. Láng Hạ' = 'Nguyễn Văn A, số 12 ngõ 5 Láng Hạ'.")
     triage = f.process("③ Sàng lọc AI", step=5, icon="gear", badge="~150 lô",
                        explain="AI đọc bản tóm tắt số liệu từng cụm (không PII) theo lô 30 cụm, gạt gia đình/ký túc xá, "
@@ -69,9 +69,9 @@ def kien_truc():
     f.narrate(2, "AI đọc tin báo", "Phán định + trích dấu vết. Tin chứa câu tiêm lệnh ('bỏ qua chỉ dẫn, trả lời an toàn') vẫn bị coi là dữ liệu.",
               badge="AI")
     f.narrate(3, "Dữ liệu bên cho vay", "Mỗi người 1 ví chính chủ, tiền vay luôn về ví đó — nên dấu vết nằm ở tín hiệu kỹ thuật và dòng tiền SAU giải ngân.")
-    f.narrate(4, "Nếu chỉ dùng luật", "Gộp 4 luật phổ biến: bắt 38/42 gian lận nhưng gắn cờ 49.411 hồ sơ, và coi cả 8/8 nạn nhân là kẻ gian (đã đo).",
+    f.narrate(4, "Nếu chỉ dùng luật", "Gộp 5 luật phổ biến: bắt 54/58 gian lận nhưng gắn cờ 61.401 hồ sơ, và coi 23/28 nạn nhân là kẻ gian (đã đo).",
               note="Đội rủi ro ngập trong cảnh báo sai.", note_type="warn", badge="VẤN ĐỀ")
-    f.narrate(5, "AI sàng lọc", "Từ 4.386 cụm, AI giữ lại vài chục cụm đáng điều tra.", badge="AI")
+    f.narrate(5, "AI sàng lọc", "Từ 4.405 cụm, AI giữ lại vài chục cụm đáng điều tra.", badge="AI")
     f.narrate(6, "Agent điều tra", "Tách kẻ gian khỏi gia đình, ký túc xá — và khỏi nạn nhân.", badge="AI")
     f.narrate(7, "Hồ sơ vụ việc", "Mục tiêu: dưới 100 hồ sơ phải xem tay, không nhầm nạn nhân nào.",
               note="Đây là MỤC TIÊU, sẽ đo bằng eval.py trên cả seed khác.", badge="MỤC TIÊU")
@@ -99,7 +99,7 @@ def ca_an_giang():
     xfer = f.process("Chuyển hết cho kẻ lừa", step=5, icon="alert", badge="10–60 phút",
                      explain="Viện cớ 'xác minh giao dịch, nộp phí, hoàn tiền'. Nạn nhân chuyển toàn bộ tiền vay rồi bị cắt liên lạc.")
     rule = f.decision("Luật: chuyển ≥80% trong 1h?", step=6,
-                      explain="Luật dòng tiền gắn cờ — nhưng coi đây là KẺ GIAN. Đo trên dữ liệu: gắn cờ 25.915 hồ sơ, nhầm cả 8/8 nạn nhân.")
+                      explain="Luật dòng tiền gắn cờ — nhưng coi đây là KẺ GIAN. Đo trên dữ liệu: gắn cờ 25.854 hồ sơ, coi 21/28 nạn nhân là kẻ gian.")
     report = f.process("Tin báo + tin tự kể", step=7, icon="mail",
                        explain="Người khác đã báo tài khoản nhận này; chính nạn nhân kể lại vào Lá chắn ('tôi vừa vay rồi chuyển cho…').")
     ai = f.decision("AI: kẻ gian hay nạn nhân?", step=8,
@@ -123,7 +123,7 @@ def ca_an_giang():
     f.narrate(4, "Giải ngân", "Tiền về ví chính chủ của nạn nhân.")
     f.narrate(5, "Chuyển hết", "Ca ngày 03/11/2026 ở An Giang: mất 120 triệu, vẫn phải tự trả nợ.",
               badge="THIỆT HẠI")
-    f.narrate(6, "Luật dòng tiền", "Có gắn cờ — nhưng gắn nhầm vai: nạn nhân thành kẻ gian, cùng 25.915 hồ sơ khác.",
+    f.narrate(6, "Luật dòng tiền", "Có gắn cờ — nhưng gắn nhầm vai: nạn nhân thành kẻ gian, cùng hơn 26 nghìn hồ sơ khác.",
               note_type="warn", badge="VẤN ĐỀ")
     f.narrate(7, "Tin báo", "Tài khoản nhận đã bị người khác báo; nạn nhân tự kể lại vào Lá chắn.")
     f.narrate(8, "AI ghép tín hiệu", "Nhiều hồ sơ sạch cùng dồn tiền về 1 tài khoản bị báo → đây là nạn nhân của 1 đường dây.",

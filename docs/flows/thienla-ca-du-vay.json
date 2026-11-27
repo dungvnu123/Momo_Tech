@@ -98,7 +98,7 @@
       "id": "d7",
       "type": "decision",
       "label": "Luật: chuyển ≥80% trong 1h?",
-      "explain": "Luật dòng tiền gắn cờ — nhưng coi đây là KẺ GIAN. Đo trên dữ liệu: gắn cờ 25.915 hồ sơ, nhầm cả 8/8 nạn nhân.",
+      "explain": "Luật dòng tiền gắn cờ — nhưng coi đây là KẺ GIAN. Đo trên dữ liệu: gắn cờ 25.854 hồ sơ, coi 21/28 nạn nhân là kẻ gian.",
       "step": 6,
       "color": "",
       "x": null,
@@ -279,7 +279,7 @@
     {
       "n": 6,
       "title": "Luật dòng tiền",
-      "body": "Có gắn cờ — nhưng gắn nhầm vai: nạn nhân thành kẻ gian, cùng 25.915 hồ sơ khác.",
+      "body": "Có gắn cờ — nhưng gắn nhầm vai: nạn nhân thành kẻ gian, cùng hơn 26 nghìn hồ sơ khác.",
       "note": "",
       "note_type": "warn",
       "badge": "VẤN ĐỀ"

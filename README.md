@@ -29,7 +29,8 @@ Mở http://localhost:4404, chọn nhóm **Thiên La**, bấm ▶ Trình chiếu
 Toàn bộ là dữ liệu giả (thương hiệu “FinVay” hư cấu). Thư mục `data/` không commit — sinh lại bằng seed cố định:
 
 ```bash
-python gen_data.py
+python gen_data.py                          # seed chuẩn → data/
+python gen_data.py --seed 7 --out data_seed7  # bộ chấm chéo
 ```
 
 Kết quả: `data/applications.csv` (200.000 hồ sơ), `data/wallet_transfers.csv`, `data/scam_reports.csv`, `data/ground_truth.json`, kèm tự kiểm tra và bảng baseline luật. Chỉ dùng thư viện chuẩn Python 3.10+.
