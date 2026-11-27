@@ -8,7 +8,7 @@ ponytail: trạng thái giữ trong RAM của 1 tiến trình; chạy thật th�
 from collections import defaultdict
 from datetime import datetime
 
-from . import ai
+from .backend import mock_ai as ai
 
 SEV_W = {"khan": 3, "cao": 2, "tb": 1}
 

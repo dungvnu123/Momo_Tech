@@ -1,11 +1,25 @@
 [project]
 name = "thien-la"
 version = "0.1.0"
+description = "Thiên La — nền tảng Agent truy vết gian lận tín dụng"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.165.0",
     "feature-flow[server]",
+    "google-genai>=3.6.1",
+    "langgraph>=1.2.24",
+    "networkx>=3.7",
+    "pydantic>=2.14.4",
+    "python-dotenv>=1.2.4",
     "uvicorn>=0.54.0",
+]
+
+[tool.uv]
+package = false
+
+[dependency-groups]
+dev = [
+    "httpx>=0.29.0",
 ]
 
 [tool.uv.sources]

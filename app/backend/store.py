@@ -1,4 +1,4 @@
-# path: app/tools.py
+# path: app/backend/store.py
 """Tool CHỈ ĐỌC trên thienla.db — agent Thám tử (giả lập hay Claude) đều gọi qua đây.
 Mọi CCCD/SĐT trả ra đều đã che bớt (mask)."""
 import json
@@ -6,7 +6,7 @@ import sqlite3
 from collections import defaultdict
 from datetime import datetime
 
-from . import ai
+from . import mock_ai as ai
 
 
 def mask(s: str) -> str:
@@ -61,7 +61,7 @@ class Tools:
         for t in ts:
             a = rows[t["from_wallet"]]
             m = (datetime.fromisoformat(t["created_at"]) - datetime.fromisoformat(a["disbursed_at"])).total_seconds() / 60
-            if m <= 120 and t["to_name"] != ai.plain(a["full_name"]).upper():
+            if 0 <= m <= 120 and t["to_name"] != ai.plain(a["full_name"]).upper():
                 out[a["app_id"]] += int(t["amount"])
                 recips.add(t["to_id"]); senders[t["to_id"]].add(a["app_id"])
         fast = sorted(x for x, s in out.items() if s >= 0.8 * int(next(r for r in rows.values() if r["app_id"] == x)["amount"]))

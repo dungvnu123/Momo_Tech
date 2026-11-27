@@ -1,14 +1,13 @@
-# path: app/ai.py
-"""Chỗ cắm AI — HỢP ĐỒNG giữa backend và phần AI.
+# path: app/backend/mock_ai.py
+"""Bản giả lập bằng luật cho build.py và engine.py khi dựng mẫu offline.
 
-4 hàm dưới đây là toàn bộ chỗ backend gọi AI. Đầu vào/ra theo schema ở docs/system_design.md mục 4.
-Hiện là BẢN GIẢ LẬP bằng luật (MODE = "mock"): không gọi model, KHÔNG đọc ground_truth.
-Người làm AI chỉ cần thay thân 4 hàm (gọi Claude, tool use), giữ nguyên tên + kiểu trả về.
+Không gọi model, không đọc ground_truth. Các API web gọi AI thật qua
+backend/integration.py; giữ module này để tái tạo cảnh báo và kết luận mẫu.
 """
 import re
 import unicodedata
 
-MODE = "mock"   # đổi thành "claude" khi đã cắm model thật
+MODE = "mock"
 
 OFFICIAL = "FinVay"   # thương hiệu hư cấu trong dữ liệu mô phỏng
 INJECTION = re.compile(r"(?i)(bo qua moi chi dan|\[system\]|assistant must|ghi chu cho ai)")
@@ -122,7 +121,7 @@ def investigate(c: dict, tools, as_of: str | None = None) -> "iter[dict]":
     """Sinh từng bước {type: step|case, ...}.
     c: ảnh chụp cụm tại lúc cảnh báo {cluster_id, app_ids, wallets, size, signals, n_pending}.
     as_of: chỉ được thấy dữ liệu tới thời điểm này (không nhìn trước tương lai).
-    `tools`: tech_profile, money_flow, account_senders, reports_mentioning (app/tools.py).
+    `tools`: tech_profile, money_flow, account_senders, reports_mentioning (backend/store.py).
     Bản giả lập gọi tool theo kịch bản cố định rồi kết luận bằng luật."""
     yield {"type": "step", "tool": "get_cluster", "thought": "Xem cụm và các điểm dùng chung.",
            "result": f"{c['size']} hồ sơ; tín hiệu: {', '.join(k for k, v in c['signals'].items() if v) or '—'}"}

@@ -258,7 +258,7 @@
     {
       "n": 5,
       "title": "Điều tra",
-      "body": "Hiện là bản giả lập bằng luật; người làm AI thay trong app/ai.py.",
+      "body": "Cảnh báo dựng sẵn dùng luật mô phỏng. Khi bấm Điều tra, backend/integration.py gọi Agent và Gemini thật.",
       "note": "Mốc bản giả lập: 57/58 kẻ gian, 0 nạn nhân bị nhầm, nhưng nhầm 298 hồ sơ vô hại — AI phải cắt phần này.",
       "note_type": "warn",
       "badge": ""

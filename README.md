@@ -7,67 +7,101 @@
 Chủ đề dự thi: **Chống lừa đảo** (chính) · An ninh mạng · Trợ lý AI.
 
 ## Tài liệu
+- [docs/project_structure.md](docs/project_structure.md) — cấu trúc theo chức năng và middleware.
 - [docs/system_design.md](docs/system_design.md) — thiết kế hệ thống, đánh giá, đối chiếu thủ đoạn thực tế 2026 (có nguồn).
 - [docs/Thien_La_gioi_thieu.docx](docs/Thien_La_gioi_thieu.docx) — bản giới thiệu đề tài.
-
-## Chạy web app
-
-```bash
-uv sync
-python gen_data.py                 # sinh dữ liệu mô phỏng → data/
-uv run python build.py             # dựng thienla.db: tín hiệu, cụm, tin báo, sàng lọc, điều tra trước (~10 giây)
-uv run uvicorn app.main:app --port 4420
-```
-
-Mở http://localhost:4420 — 4 màn: **Tổng quan** (phễu + so với luật), **Lá chắn** (dán tin nghi lừa), **Chuyển tiền**
-(cảnh báo lúc chuyển sau giải ngân), **Lưới & Thám tử** (cụm, đồ thị, điều tra từng bước). Luồng trình chiếu ở `/flows/`.
-
-**Phần AI** nằm gọn trong [app/ai.py](app/ai.py): 4 hàm `analyze_report`, `check_transfer`, `triage_clusters`,
-`investigate`. Hiện là **bản giả lập bằng luật** (`MODE = "mock"`, không gọi model, không đọc đáp án); người làm AI
-thay thân 4 hàm, giữ nguyên tên + kiểu trả về (schema ở `docs/system_design.md` mục 4). Tool chỉ đọc cho agent: [app/tools.py](app/tools.py).
-
-Kết quả bản giả lập (mốc để AI phải vượt): kết luận 399 hồ sơ là kẻ gian, đúng 57/58 nhưng **nhầm 341 hồ sơ vô hại**;
-nhận ra 22/28 nạn nhân.
-
-## Luồng trình chiếu (feature-flow)
-Dựng bằng [feature-flow](https://github.com/hoangvunghi/feature-flow), quản lý môi trường bằng `uv`:
-
-```bash
-uv sync
-uv run python flows/build_flows.py                       # → docs/flows/*.json
-FF_FLOWS_DIR=docs/flows uv run uvicorn feature_flow.server:app --port 4404
-# PowerShell: $env:FF_FLOWS_DIR="docs/flows"; uv run uvicorn feature_flow.server:app --port 4404
-```
-
-Mở http://localhost:4404, chọn nhóm **Thiên La**, bấm ▶ Trình chiếu:
-- `thienla-kien-truc`: từ 200.000 hồ sơ tới đường dây (khối 3D).
-- `thienla-ca-du-vay`: ca thật Công an An Giang cảnh báo 09/11/2026, ca demo chính.
-- `thienla-agent-dieu-tra`: vòng điều tra của agent.
 
 ## Dữ liệu mô phỏng
 Toàn bộ là dữ liệu giả (thương hiệu “FinVay” hư cấu). Thư mục `data/` không commit — sinh lại bằng seed cố định:
 
 ```bash
-python gen_data.py                          # seed chuẩn → data/
-python gen_data.py --seed 7 --out data_seed7  # bộ chấm chéo
+uv run gen_data.py
 ```
 
-Dữ liệu nhiều bảng, mọi thứ có mốc thời gian (01/06 → 25/11/2026):
+Kết quả: `data/applications.csv` (200.000 hồ sơ), `data/wallet_transfers.csv`, `data/scam_reports.csv`, `data/ground_truth.json`, kèm tự kiểm tra và bảng baseline luật. Chỉ dùng thư viện chuẩn Python 3.10+.
 
-| File | Mỗi dòng | Mốc thời gian |
-|---|---|---|
-| `applications.csv` | 1 hồ sơ (200.000) | nộp → xong eKYC → duyệt/từ chối → giải ngân; kỳ hạn 3 tháng, lãi 36%/năm |
-| `ekyc_sessions.csv` | 1 lần thử eKYC | thời điểm, thiết bị, liveness, máy hook, đạt/trượt |
-| `repayment_schedule.csv` | 1 kỳ trả | ngày đến hạn, gốc, lãi |
-| `repayments.csv` | 1 lần trả | ngày trả, số tiền, kênh |
-| `wallet_transfers.csv` | 1 lần chuyển đi sau giải ngân | thời điểm + ngữ cảnh người nhận (danh bạ, lịch sử, SIMO) |
-| `scam_reports.csv` | 1 tin báo | thời điểm, chỉ có chữ thô |
-| `ground_truth.json` | đáp án | chỉ dùng để chấm |
+## Chạy chung giao diện, backend và AI
 
-Quá hạn **không** là cột chốt sẵn: tính tại từng thời điểm từ lịch trả + các lần trả. Chỉ dùng thư viện chuẩn Python 3.10+.
+```bash
+uv sync --locked
+uv run python -X utf8 gen_data.py --out data/backend
+uv run python -X utf8 build.py --data data/backend --db thienla.db
+uv run python -m app.graph build --data-dir data/backend --database data/backend/graph.db
+```
+
+Tạo `.env` theo `.env.example`, điền `LLM_API_KEY` và `LLM_MODEL_NAME`, rồi chạy:
+
+```bash
+uv run uvicorn app.main:app --host 127.0.0.1 --port 4420
+```
+
+Mở [giao diện](http://127.0.0.1:4420/), [luồng chức năng](http://127.0.0.1:4420/flows/)
+hoặc [Swagger](http://127.0.0.1:4420/docs). Các API `/api/shield/analyze`,
+`/api/transfer/check` và `/api/alerts/{id}/investigate` gọi AI thật. Agent vẫn
+kế thừa `BaseAgent`, dùng chung workflow và giới hạn 12 tool call.
+
+`build.py` dựng cảnh báo và kết luận mẫu **bằng luật, không gọi LLM**. Những kết
+quả này có `mode=mock` và được ghi rõ là giả lập trên giao diện. Bấm **Điều tra**
+để chạy Gemini, thay kết luận mẫu bằng kết quả Agent nếu phiên chạy thành công.
+Các bộ đếm đánh giá có thể chứa cả kết quả mẫu và kết quả AI đã chạy.
+
+Agent từ giao diện dùng tool đọc `thienla.db` tại thời điểm cảnh báo (`as_of`);
+API `/api/investigations` dùng graph chỉ định bởi `GRAPH_DATABASE`, là ảnh chụp
+toàn bộ dữ liệu đã build. Hai đường chạy dùng cùng Agent và bộ kiểm tra kết luận.
+Chi tiết: [docs/backend_integration.md](docs/backend_integration.md).
 
 ## Trạng thái
+- [x] BaseAgent + LangGraph, AgentManager và controller FastAPI
+- [x] Module graph dữ liệu riêng: SQLite, quan hệ có nguồn bằng chứng và graph con NetworkX
+- [x] Agent điều tra kế thừa BaseAgent, gọi tool có giới hạn và client Gemini
+- [x] AI phân tích tin báo, hợp nhất thực thể, sàng lọc cụm và đánh giá giao dịch
 - [x] Sinh dữ liệu mô phỏng + baseline luật
 - [x] Tài liệu thiết kế
-- [ ] Lá chắn, Lưới, Sàng lọc AI, Thám tử
-- [ ] Giao diện, triển khai online
+- [x] Backend dựng cụm ứng viên, giao diện và luồng điều tra gọi AI
+- [ ] Triển khai online
+
+## Môi trường phát triển
+
+Toàn bộ dự án dùng **uv**, Python **3.12** (xem `.python-version`). Khai báo
+thư viện trong `pyproject.toml`, commit `uv.lock` để đồng bộ phiên bản.
+
+```bash
+uv sync --locked
+uv run uvicorn app.main:app --reload
+uv run python -m unittest discover -s tests -v
+uv run gen_data.py
+```
+
+Thêm thư viện bằng `uv add <package>`, công cụ phát triển bằng
+`uv add --dev <package>`. Không dùng `requirements.txt` hoặc cài thư viện trực
+tiếp vào môi trường bằng pip. Phần nền tảng dùng FastAPI, Pydantic, LangGraph
+và uvicorn. Agent điều tra có Gemini SDK; xem hướng dẫn cấu hình bên dưới.
+
+Mở `http://127.0.0.1:8000/docs` để xem API. Điều tra bằng
+`POST /api/investigations` với `app_id`, không cần chọn agent. Ứng dụng khởi
+động được khi chưa có key; API điều tra trả `503` nếu thiếu cấu hình Gemini.
+API agent mặc định cũ vẫn dùng client được truyền vào `create_app()`.
+
+Nếu `uv` chưa có trong PATH, bản cục bộ của workspace này nằm tại
+`.tools/bin/uv.exe`; ví dụ PowerShell: `.\.tools\bin\uv.exe sync --locked`.
+Thư mục `.tools/` không được commit; máy khác cần cài uv trước.
+
+Chi tiết mở rộng nền tảng: [docs/agent_foundation.md](docs/agent_foundation.md).
+
+Graph dữ liệu: [docs/data_graph.md](docs/data_graph.md).
+
+Tool truy vấn graph: [docs/graph_tools.md](docs/graph_tools.md).
+
+Agent điều tra và cấu hình Gemini: [docs/investigation_agent.md](docs/investigation_agent.md).
+
+Toàn bộ module AI và cách kiểm tra: [docs/ai_pipeline.md](docs/ai_pipeline.md).
+
+```bash
+uv run python -m app.agents.investigation --app-id HS00001 --demo --stream
+```
+
+```bash
+uv run gen_data.py
+uv run python -m app.graph build
+uv run python -m app.graph inspect app:HS00001 --depth 2
+```

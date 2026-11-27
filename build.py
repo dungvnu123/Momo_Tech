@@ -14,9 +14,9 @@ import sqlite3
 import time
 from pathlib import Path
 
-from app import ai
+from app.backend import mock_ai as ai
 from app.engine import Engine, events
-from app.tools import Tools
+from app.backend.store import Tools
 
 ROOT = Path(__file__).resolve().parent
 ap = argparse.ArgumentParser()

@@ -1,0 +1,65 @@
+"""Translate the web API contracts to the shared AI services and BaseAgent."""
+import json
+
+from app.agents.investigation import InvestigationAgent
+from app.ai.shield.indicators import canonical_indicator
+from app.ai.transfer.schemas import TransferCheck
+from app.types.schemas import AgentContext
+
+from .agent_tools import BackendAgentTools
+
+
+class BackendAI:
+    def __init__(self, service, client, store):
+        self.service, self.client, self.store = service, client, store
+
+    async def analyze_report(self, text):
+        result = await self.service.analyze_report(text)
+        indicators = {"accounts": [], "phones": [], "urls": []}
+        for item in result.indicators:
+            canonical = canonical_indicator(item)
+            group = "accounts" if item.kind == "bank_account" else "urls" if item.kind == "url" else "phones"
+            indicators[group].append(canonical.rsplit(":", 1)[-1] if group != "urls" else canonical.split(":", 1)[-1])
+        return {**result.model_dump(), "indicators": indicators, "mode": "gemini"}
+
+    async def check_transfer(self, ctx):
+        request = TransferCheck(loan_amount=ctx["loan_amount"], transfer_amount=ctx["amount"],
+                                minutes_after_disbursal=max(0, ctx["minutes_after_disbursal"]),
+                                recipient_name_matches=ctx["to_name_matches_borrower"],
+                                recipient_in_contacts=ctx["recipient_in_contacts"],
+                                contact_saved_minutes_ago=ctx["contact_saved_minutes_ago"],
+                                prior_transfers_to_recipient=ctx["prior_transfers_to_recipient"],
+                                simo_flag=ctx["simo_flag"], reported_recipient_count=ctx["times_reported"])
+        result = await self.service.check_transfer(request)
+        return {**result.model_dump(), "message_for_customer": result.advice, "mode": "gemini"}
+
+    async def investigate(self, alert):
+        tools = BackendAgentTools(self.store, alert)
+        if not tools.ids:
+            yield {"type": "case", "case": {"verdict": "inconclusive", "confidence": 0,
+                   "members": [], "victims": [], "evidence": [], "actions": [], "mode": "gemini"}}
+            return
+        agent = InvestigationAgent(self.client, tools_factory=lambda: tools)
+        context = AgentContext(metadata={"cluster_id": alert["cluster_id"]})
+        async for event, data in agent._events(tools.ids[0], context):
+            if event == "model_step":
+                yield {"type": "step", "tool": None, "thought": "Đang chọn bước kiểm tra tiếp theo.",
+                       "result": ", ".join(data["requested_tools"])}
+            elif event == "tool_result":
+                yield {"type": "step", "tool": data["name"], "thought": "Đối chiếu dữ liệu tại thời điểm cảnh báo.",
+                       "result": json.dumps(data["result"], ensure_ascii=False)}
+            elif event == "done":
+                case = {**data["case"], "evidence": [e["claim"] + " [" + e["source"] + "]" for e in data["case"]["evidence"]],
+                        "cluster_id": alert["cluster_id"], "as_of": alert["ts"], "mode": "gemini",
+                        "run_id": data["run_id"], "status": data["status"], "reason": data["reason"]}
+                case["source_evidence"] = data["case"]["evidence"]
+                case["tool_steps"] = data["steps"]
+                case["model_turns"] = data["model_turns"]
+                if data["status"] == "completed":
+                    self.store.db.execute("INSERT OR REPLACE INTO cases VALUES (?,?,?,?,?,?)",
+                                          (alert["alert_id"], alert["cid"], case["verdict"], json.dumps(case["members"]),
+                                           json.dumps(case["victims"]), json.dumps(case, ensure_ascii=False)))
+                    self.store.db.execute("UPDATE alerts SET verdict=?, case_conf=? WHERE alert_id=?",
+                                          (case["verdict"], case["confidence"], alert["alert_id"]))
+                    self.store.db.commit()
+                yield {"type": "case", "case": case}

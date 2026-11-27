@@ -30,7 +30,7 @@ function heroNet() {
 async function overview() {
   heroNet();
   const [o, m] = await Promise.all([api("overview"), api("metrics")]);
-  $("#mode").textContent = o.ai_mode === "mock" ? "Chế độ chưa cắm AI (giả lập bằng luật)" : "AI: " + o.ai_mode;
+  $("#mode").textContent = o.ai_mode === "mock" ? "Chế độ chưa cắm AI (giả lập bằng luật)" : "AI: " + o.ai_mode + (o.cached_cases_mode === "mock" ? " · kết quả dựng sẵn: giả lập" : "");
   const steps = [[o.events, "sự kiện xử lý theo thời gian"], [o.candidates, "hồ sơ có tín hiệu (lưới rộng)"], [o.clusters, "cụm có quan hệ"],
                  [o.alerts, `cảnh báo (${o.alert_clusters} cụm, ${o.transfer_holds} giao dịch giữ)`, true],
                  [m.cases ? m.cases.fraud_flagged : "—", "hồ sơ kết luận kẻ gian", true]];

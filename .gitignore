@@ -5,6 +5,8 @@ __pycache__/
 .venv/
 *.db
 ~$*
-uv.lock
-data_seed*/
-thienla*.db
+.tools/
+.uv-cache/
+
+*.db-wal
+*.db-shm

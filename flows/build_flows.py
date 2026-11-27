@@ -294,7 +294,7 @@ def hang_doi():
     f.narrate(2, "Chọn", "Ưu tiên cảnh báo Khẩn có hồ sơ đang chờ — còn chặn kịp tiền.")
     f.narrate(3, "Đồ thị", "Bấm đúp nền hoặc ⤢ Vừa khung để căn lại.")
     f.narrate(4, "Dòng thời gian", "Xem đúng thứ tự: vay xong mấy phút thì tiền đi đâu.")
-    f.narrate(5, "Điều tra", "Hiện là bản giả lập bằng luật; người làm AI thay trong app/ai.py.",
+    f.narrate(5, "Điều tra", "Cảnh báo dựng sẵn dùng luật mô phỏng. Khi bấm Điều tra, backend/integration.py gọi Agent và Gemini thật.",
               note="Mốc bản giả lập: 57/58 kẻ gian, 0 nạn nhân bị nhầm, nhưng nhầm 298 hồ sơ vô hại — AI phải cắt phần này.", note_type="warn")
     f.narrate(6, "Quyết định", "Agent chỉ đề xuất, không có quyền hành động thật.", badge="NGUYÊN TẮC")
     f.narrate(7, "Hành động + nhãn", "Mỗi quyết định thành nhãn để đo lại precision/recall.")
