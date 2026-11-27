@@ -9,6 +9,7 @@ from app.controller.agents import router as agent_router
 from app.controller.investigations import router as investigation_router
 from app.controller.ai import router as ai_router
 from app.ai.service import AIService
+from app.ai.pipeline.runner import PipelineService
 from app.services.gemini_client import configured_tool_client
 from app.services.llm_client import LLMClient, UnconfiguredLLMClient
 from app.core.config import configured_service_key, load_environment
@@ -22,7 +23,8 @@ from app.security import WebSecurityPolicy
 def create_app(llm_client: LLMClient | None = None, *, tool_llm_client=None,
                graph_database=None, ai_cache=None,
                service_api_key: str | None = None, backend_database=None,
-               web_password: str | None = None, web_secret: str | None = None) -> FastAPI:
+               web_password: str | None = None, web_secret: str | None = None,
+               pipeline_directory=None) -> FastAPI:
     load_environment()
     configure_request_logging()
     key = configured_service_key() if service_api_key is None else service_api_key
@@ -47,6 +49,9 @@ def create_app(llm_client: LLMClient | None = None, *, tool_llm_client=None,
     application.state.investigation_agent = InvestigationAgent(tool_client, database=database_path)
     application.include_router(investigation_router)
     application.state.ai_service = AIService(tool_client, cache_path=ai_cache)
+    backend_path = None if backend_database is False else backend_database or os.environ.get("THIENLA_DB", "thienla.db")
+    application.state.pipeline_service = PipelineService(tool_client, backend_path,
+        pipeline_directory or os.environ.get("AI_PIPELINE_DIR", "data/ai-pipeline"))
     application.include_router(ai_router)
 
     @application.get("/health")
