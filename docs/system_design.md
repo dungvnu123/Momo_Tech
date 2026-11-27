@@ -291,7 +291,8 @@ thien-la/
 │   └── ai.py            # shield, er, triage, agent + llm_cache
 ├── web/index.html       # 1 trang, 3 tab, Cytoscape từ CDN
 ├── docs/system_design.md
-├── requirements.txt     # fastapi, uvicorn, networkx, anthropic
+├── pyproject.toml       # quản lý thư viện bằng uv; chỉ thêm khi triển khai module
+├── uv.lock              # phiên bản thư viện được khóa, commit cùng mã nguồn
 └── README.md
 ```
 
