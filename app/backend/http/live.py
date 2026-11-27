@@ -1,6 +1,7 @@
 import asyncio
 import json
 from fastapi.responses import StreamingResponse
+from fastapi import HTTPException
 from .common import alert_row
 
 
@@ -10,6 +11,11 @@ def register(app, tools, adapter, META):
         """Phát lại realtime: đồng hồ mô phỏng chạy nhanh (1 ngày = day_seconds giây), đẩy cảnh báo đúng lúc nó sinh ra.
         Cảnh báo do app/engine.py sinh khi xử lý từng sự kiện theo thời gian; chạy thật thì engine đọc thẳng hàng đợi sự kiện."""
         from datetime import datetime, timedelta
+        try:
+            datetime.fromisoformat(start)
+        except ValueError:
+            raise HTTPException(400, "Ngày bắt đầu sai định dạng (YYYY-MM-DD)") from None
+        day_seconds = max(1.0, min(day_seconds, 120.0))
         rows = [alert_row(r) for r in tools.q("SELECT * FROM alerts WHERE ts >= ? ORDER BY ts", start)]
         end = datetime.fromisoformat(META["last_day"]) + timedelta(days=1)
 

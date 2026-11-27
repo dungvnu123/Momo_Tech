@@ -26,8 +26,9 @@ def backend_agent_pipeline():
                 "Request chỉ gửi ID cảnh báo, không gửi toàn bộ graph hoặc prompt tự do.")
     middleware = f.process("Kiểm tra request", step=3, icon="lock", badge="ASGI",
         explain="app/middleware/: nhận/tạo X-Request-ID và ghi log trạng thái, thời gian. "
-                "Nếu cấu hình APP_API_KEY thì /api/* cần X-API-Key; không hợp lệ trả 401. "
-                "Demo giao diện local hiện để khóa service trống. Middleware không suy luận gian lận.")
+                "Khi bật THIENLA_PASSWORD, màn hồ sơ/AI điều tra cần phiên cookie hoặc khóa service đúng; sai trả 401. "
+                "Login, Lá chắn, thống kê là công khai khi dùng đăng nhập web, có giới hạn lượt gọi. "
+                "Local để mật khẩu và khóa service trống. Middleware không suy luận gian lận, không gom SSE.")
     snapshot = f.process("Đọc snapshot cảnh báo", step=4, icon="file", badge="alert.ts",
         explain="backend/http/alerts.py → Tools.alert(aid): đọc app_ids, signals, kind, transfer_id và ts. "
                 "Không tìm thấy trả 404. BackendAgentTools chỉ cho đọc hồ sơ/giao dịch/tin báo đã xuất hiện tới ts. "
@@ -148,7 +149,7 @@ def backend_agent_pipeline():
     stories = [
         ("Dữ liệu xuất phát từ đâu?", "Demo dựng cảnh báo trước bằng build.py/Engine trên dữ liệu mô phỏng. LLM thật bắt đầu khi bạn bấm Điều tra; không có giao dịch ngân hàng thật được đọc tự động."),
         ("Backend nhận yêu cầu", "Người dùng chọn alert_id trên Lưới & Thám tử. Giao diện mở EventSource tới GET /api/alerts/{aid}/investigate."),
-        ("Middleware làm phần chung", "Tạo request_id, ghi thời gian và kiểm tra khóa nếu có cấu hình. Middleware không đánh giá gian lận."),
+        ("Middleware làm phần chung", "Tạo request_id, ghi thời gian, giới hạn lượt gọi và kiểm tra cookie/khóa service nếu có cấu hình. Local mở khi chưa đặt mật khẩu. Middleware không đánh giá gian lận, không gom SSE."),
         ("Đóng phạm vi điều tra", "Backend đọc snapshot tại alert.ts. Những giao dịch hoặc tin báo xuất hiện sau thời điểm đó không được đưa vào phiên này."),
         ("Full Agent vẫn kế thừa BaseAgent", "BackendAI truyền bộ tool snapshot vào InvestigationAgent. Agent dựng LangGraph và dùng prompt riêng cho backend, không tạo một Agent nghiệp vụ khác."),
         ("LLM chọn hành động", "Gemini chỉ thấy dữ liệu đã đọc và schema tool. Nó chọn tool cần gọi; không tự chạy SQL, không nhận cả graph và không có quyền giữ tiền."),

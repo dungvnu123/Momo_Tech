@@ -60,7 +60,7 @@
       "id": "p4",
       "type": "process",
       "label": "Kiểm tra request",
-      "explain": "app/middleware/: nhận/tạo X-Request-ID và ghi log trạng thái, thời gian. Nếu cấu hình APP_API_KEY thì /api/* cần X-API-Key; không hợp lệ trả 401. Demo giao diện local hiện để khóa service trống. Middleware không suy luận gian lận.",
+      "explain": "app/middleware/: nhận/tạo X-Request-ID và ghi log trạng thái, thời gian. Khi bật THIENLA_PASSWORD, màn hồ sơ/AI điều tra cần phiên cookie hoặc khóa service đúng; sai trả 401. Login, Lá chắn, thống kê là công khai khi dùng đăng nhập web, có giới hạn lượt gọi. Local để mật khẩu và khóa service trống. Middleware không suy luận gian lận, không gom SSE.",
       "step": 3,
       "color": "",
       "x": 60,
@@ -486,7 +486,7 @@
     {
       "n": 3,
       "title": "Middleware làm phần chung",
-      "body": "Tạo request_id, ghi thời gian và kiểm tra khóa nếu có cấu hình. Middleware không đánh giá gian lận.",
+      "body": "Tạo request_id, ghi thời gian, giới hạn lượt gọi và kiểm tra cookie/khóa service nếu có cấu hình. Local mở khi chưa đặt mật khẩu. Middleware không đánh giá gian lận, không gom SSE.",
       "note": "",
       "note_type": "info",
       "badge": ""

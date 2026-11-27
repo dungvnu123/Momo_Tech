@@ -115,7 +115,8 @@ class Tools:
                 break
         prof = {k: a[k] for k in ("app_id", "full_name", "dob", "address", "amount", "purpose", "status", "ip_type", "sim_age_days",
                                   "device_id", "is_emulator", "fill_time_sec", "wallet_age_days", "ekyc_attempts", "liveness_score")}
-        prof.update(phone=mask(a["phone"]), cccd=mask(a["cccd"]))
+        prof.update(phone=mask(a["phone"]), cccd=mask(a["cccd"]), dob=a["dob"][:4],   # tối thiểu hoá: năm sinh + tỉnh
+                    address=a["address"].replace(" - ", ", ").split(",")[-1].strip())
         return {"profile": prof, "as_of": as_of, "dpd": dpd,
                 "events": [{"ts": e[0], "type": e[1], "title": e[2], "detail": e[3]} for e in ev]}
 

@@ -61,7 +61,13 @@ Middleware xử lý phần chung của HTTP, không chạy logic phân tích AI.
   do router cung cấp; operation là tên module/hàm để định vị code.
 - `ServiceKeyMiddleware`: nếu cấu hình `APP_API_KEY`, các đường dẫn
   `/api/*` yêu cầu `X-API-Key` đúng. Sai hoặc thiếu key trả `401` trước khi
-  gọi model. `/health`, `/docs`, `/openapi.json` vẫn truy cập được.
+  gọi model. Khi bật đăng nhập web, cho phép phiên cookie hợp lệ và những
+  API web công khai (login, Lá chắn, thống kê). `/health` vẫn truy cập được;
+  Swagger/OpenAPI mở khi local không bật mật khẩu và tắt khi bật mật khẩu.
+- `WebSecurityMiddleware`: phiên web, giới hạn lượt gọi theo IP và header
+  bảo mật. Các API hồ sơ và AI điều tra cần cookie hoặc khóa service khi
+  đặt `THIENLA_PASSWORD`. Bộ đếm theo app; SSE chuyển tiếp ngay từng chunk.
+  Đăng nhập/me/logout nằm trong `backend/http/auth.py`, ký phiên ở `security.py`.
 - Lỗi ngoài dự kiến dùng handler trong `core/http.py`: response `500`
   chỉ có thông báo chung và request ID, không trả nguyên văn exception.
 

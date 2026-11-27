@@ -57,6 +57,13 @@ SSE và nhánh lỗi. Dựng lại các sơ đồ bằng `uv run python -X utf8 
 nguồn luồng này nằm ở `flows/backend_agent.py`.
 
 ## Trạng thái
+
+Đăng nhập đội rủi ro: đặt `THIENLA_PASSWORD` và `THIENLA_SECRET` trong `.env`.
+Để trống mật khẩu thì chạy local không cần đăng nhập. Khi đặt mật khẩu, API
+hồ sơ/điều tra yêu cầu phiên cookie hoặc khóa service hợp lệ; Swagger/OpenAPI
+được tắt. Lá chắn và thống kê tổng hợp vẫn công khai, có giới hạn lượt gọi.
+Chỉ bật `THIENLA_BEHIND_PROXY=1` khi chạy sau reverse proxy do mình quản lý.
+
 - [x] BaseAgent + LangGraph, AgentManager và controller FastAPI
 - [x] Module graph dữ liệu riêng: SQLite, quan hệ có nguồn bằng chứng và graph con NetworkX
 - [x] Agent điều tra kế thừa BaseAgent, gọi tool có giới hạn và client Gemini

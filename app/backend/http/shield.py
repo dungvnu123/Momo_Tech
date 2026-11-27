@@ -1,7 +1,7 @@
 import json
 
 from fastapi import HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from app.core.http import run_ai
 from .. import mock_ai as ai
 from .common import times_reported
@@ -9,7 +9,7 @@ from .common import times_reported
 
 def register(app, tools, adapter, META):
     class ReportIn(BaseModel):
-        text: str
+        text: str = Field(max_length=4000)
 
 
     @app.post("/api/shield/analyze")

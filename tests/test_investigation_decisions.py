@@ -18,12 +18,12 @@ class InvestigationDecisionTests(unittest.TestCase):
         with sqlite3.connect(self.fixture.database) as db:
             db.execute("ALTER TABLE alerts ADD COLUMN kind")
             db.execute("ALTER TABLE alerts ADD COLUMN transfer_id")
-            db.execute("UPDATE alerts SET kind='transfer',transfer_id='T1'")
-            db.execute("UPDATE transfers SET simo_flag='True',amount='639000' WHERE transfer_id='T1'")
+            db.execute("UPDATE alerts SET kind='transfer',transfer_id='CK00001'")
+            db.execute("UPDATE transfers SET simo_flag='True',amount='639000' WHERE transfer_id='CK00001'")
 
     def read(self):
         tools = self.fixture.tools()
-        result = tools.call("get_transfer", {"transfer_id": "T1"})
+        result = tools.call("get_transfer", {"transfer_id": "CK00001"})
         self.assertTrue(result["ok"], result)
         return tools, ToolStep(tool_call_id="transfer-read", name="get_transfer", result=result)
 
@@ -31,7 +31,7 @@ class InvestigationDecisionTests(unittest.TestCase):
         return submission("transfer-read", verdict="inconclusive", confidence=0.31,
                           missing_information=["Whether the borrower was instructed to send money"],
                           transaction_assessments=[{
-                              "transfer_id": "T1", "recommendation": recommendation,
+                              "transfer_id": "CK00001", "recommendation": recommendation,
                               "reason": "SIMO flag is recorded; verify with the authorized team",
                               "evidence": [{"claim": "Recorded transfer warning", "source": "transfer-read"}],
                           }], **changes)
@@ -39,7 +39,7 @@ class InvestigationDecisionTests(unittest.TestCase):
     def test_trigger_and_hard_signal_survive_even_below_rapid_outflow_threshold(self):
         tools, step = self.read()
         cluster = tools.call("get_cluster", {})["data"]
-        self.assertEqual(cluster["triggering_transfer_id"], "T1")
+        self.assertEqual(cluster["triggering_transfer_id"], "CK00001")
         transaction = step.result["data"]["transfer"]
         self.assertTrue(transaction["simo_flag"])
         self.assertEqual(transaction["transfer_loan_ratio"], 0.639)
@@ -49,9 +49,9 @@ class InvestigationDecisionTests(unittest.TestCase):
         self.assertIn(transaction["recipient_node_id"], reports[0]["matched_recipient_node_ids"])
         flow = tools.call("money_flow", {})["data"]
         self.assertEqual(flow["fast_out_stranger"], [])
-        self.assertEqual(flow["simo_flagged_transfer_ids"], ["T1"])
+        self.assertEqual(flow["simo_flagged_transfer_ids"], ["CK00001"])
         self.assertEqual(flow["transfers"][0]["simo_flag"], True)
-        self.assertFalse(tools.call("get_transfer", {"transfer_id": "T2"})["ok"])
+        self.assertFalse(tools.call("get_transfer", {"transfer_id": "CK00002"})["ok"])
         for private in ("PRIVATE", "001234567890", "0900000001", "012345678901"):
             self.assertNotIn(private, json.dumps(step.result))
 
@@ -104,7 +104,7 @@ class InvestigationDecisionTests(unittest.TestCase):
             tools.validate_case(validate_submission(args, [step]), [step])
 
     def test_workflow_repairs_generic_conclusion_instead_of_accepting_it(self):
-        model = ScriptedClient(turn("transfer-read", "get_transfer", {"transfer_id": "T1"}),
+        model = ScriptedClient(turn("transfer-read", "get_transfer", {"transfer_id": "CK00001"}),
                                turn("invalid-finish", "submit_case", submission("transfer-read")),
                                turn("finish", "submit_case", self.case()))
         client = self.fixture.client(model)
@@ -113,13 +113,13 @@ class InvestigationDecisionTests(unittest.TestCase):
         case = events[-1]["case"]
         self.assertEqual(case["status"], "completed")
         self.assertEqual(case["confidence"], 0.31)
-        self.assertEqual(case["transaction_assessments"][0]["transfer_id"], "T1")
+        self.assertEqual(case["transaction_assessments"][0]["transfer_id"], "CK00001")
         self.assertFalse(case["tool_steps"][1]["result"]["ok"])
         self.assertTrue(case["tool_steps"][2]["result"]["ok"])
 
     def test_reports_are_joined_for_all_transfers_even_same_name_or_late(self):
         with sqlite3.connect(self.fixture.database) as db:
-            db.execute("UPDATE transfers SET to_name='PRIVATE NAME' WHERE transfer_id='T1'")
+            db.execute("UPDATE transfers SET to_name='PRIVATE NAME' WHERE transfer_id='CK00001'")
         tools, step = self.read()
         self.assertTrue(step.result["data"]["transfer"]["recipient_name_matches_applicant"])
         self.assertEqual(step.result["data"]["transfer"]["reported_recipient_count"], 1)
@@ -127,9 +127,9 @@ class InvestigationDecisionTests(unittest.TestCase):
 
     def test_bank_scope_and_pagination_do_not_mix_recipient_identities(self):
         with sqlite3.connect(self.fixture.database) as db:
-            db.execute("INSERT INTO transfers SELECT 'T3',from_wallet,to_id,to_name,'BIDV',to_type,amount,"
+            db.execute("INSERT INTO transfers SELECT 'CK00003',from_wallet,to_id,to_name,'BIDV',to_type,amount,"
                        "created_at,recipient_in_contacts,contact_saved_minutes_ago,prior_transfers_to_recipient,"
-                       "simo_flag,to_wallet_age_days,note FROM transfers WHERE transfer_id='T1'")
+                       "simo_flag,to_wallet_age_days,note FROM transfers WHERE transfer_id='CK00001'")
         tools = self.fixture.tools()
         page = tools.call("money_flow", {"limit": 1})["data"]
         self.assertTrue(page["truncated"])

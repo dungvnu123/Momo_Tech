@@ -16,16 +16,25 @@ from app.core.http import unhandled_error
 from app.core.logging import configure_request_logging
 from app.core.openapi import configure_service_security
 from app.middleware import configure_middleware
+from app.security import WebSecurityPolicy
 
 
 def create_app(llm_client: LLMClient | None = None, *, tool_llm_client=None,
                graph_database=None, ai_cache=None,
-               service_api_key: str | None = None, backend_database=None) -> FastAPI:
+               service_api_key: str | None = None, backend_database=None,
+               web_password: str | None = None, web_secret: str | None = None) -> FastAPI:
     load_environment()
     configure_request_logging()
-    application = FastAPI(title="Thiên La Agent Service", version="0.1.0")
     key = configured_service_key() if service_api_key is None else service_api_key
-    configure_middleware(application, service_api_key=key)
+    policy = WebSecurityPolicy(password=web_password, secret=web_secret, service_api_key=key)
+    application = FastAPI(title="Thiên La Agent Service", version="0.1.0",
+                          docs_url=None if policy.password else "/docs",
+                          redoc_url=None if policy.password else "/redoc",
+                          openapi_url=None if policy.password else "/openapi.json")
+    application.state.web_security = policy
+    configure_middleware(application, service_api_key=key, web_policy=policy)
+    from app.backend.http.auth import register as register_auth
+    register_auth(application)
     application.add_exception_handler(Exception, unhandled_error)
     if key:
         configure_service_security(application)

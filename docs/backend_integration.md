@@ -38,9 +38,20 @@ chỉ dùng ở `/api/metrics`, không đưa vào Agent hay tool.
 - `THIENLA_DATA`: thư mục CSV và đáp án cho trang đánh giá.
 - `GRAPH_DATABASE`: SQLite graph cho API điều tra độc lập; build từ cùng CSV.
 - `LLM_API_KEY`, `LLM_MODEL_NAME`: cấu hình Gemini, không commit `.env`.
-- `APP_API_KEY`: khi có giá trị, bảo vệ `/api/*` bằng `X-API-Key`. Giao diện
-  demo hiện chạy local với giá trị này để trống; Swagger hỗ trợ nhập key cho
-  kiểm tra API. Đăng nhập web là tính năng riêng ở nhánh backend.
+- `APP_API_KEY`: xác thực ứng dụng gọi API bằng `X-API-Key`.
+- `THIENLA_PASSWORD`, `THIENLA_SECRET`: bật đăng nhập đội rủi ro bằng cookie
+  HttpOnly/SameSite=Strict có chữ ký và thời hạn 8 giờ. Khi bật mật khẩu,
+  backend hồ sơ và các API AI điều tra/thực thể/triage được bảo vệ; phiên web
+  hợp lệ hoặc khóa service đúng đều được chấp nhận. Login/me/logout, Lá chắn
+  và thống kê tổng hợp vẫn công khai. Nếu chỉ bật khóa service mà không bật
+  mật khẩu web, giữ quy tắc `/api/*` cần key như trước.
+- `THIENLA_BEHIND_PROXY`: chỉ bật khi reverse proxy do mình quản lý; khi đó
+  tin X-Forwarded-For và đặt cookie Secure. Không bật cho local HTTP.
+
+Mật khẩu để trống thì local mở, Swagger vẫn có để test. Khi bật mật khẩu,
+Swagger/OpenAPI được tắt. WebSecurityMiddleware dùng ASGI, áp dụng giới hạn
+lượt gọi và header bảo mật mà không gom các chunk SSE. Bộ đếm riêng theo app;
+khi chạy nhiều worker cần bộ đếm dùng chung. `/flows/` giữ CSP riêng của Feature Flow.
 
 `build.py` và `engine.py` dùng `backend/mock_ai.py` để phát lại toàn bộ dữ liệu
 offline và tạo kết quả mẫu nhanh. Không thay hàng trăm lượt dựng mẫu thành gọi

@@ -14,6 +14,8 @@ def register(app, tools, adapter, META):
     def alerts(day: str = "", date_from: str = "", date_to: str = "", severity: str = "", kind: str = "", verdict: str = "",
                min_conf: float = 0, latest: bool = True, q: str = "", sort: str = "priority", limit: int = 200,
                hour_from: int = 0, hour_to: int = 24):
+        limit = max(1, min(limit, 500))
+        hour_from, hour_to = max(0, min(hour_from, 24)), max(0, min(hour_to, 24))
         where, p = ["1=1"], []
         if hour_from > 0 or hour_to < 24:   # khung giờ trong ngày [hour_from, hour_to)
             where.append("CAST(substr(ts, 12, 2) AS INT) >= ? AND CAST(substr(ts, 12, 2) AS INT) < ?"); p += [hour_from, hour_to]
@@ -95,6 +97,12 @@ def register(app, tools, adapter, META):
 
     @app.get("/api/apps/{app_id}")
     def app_timeline(app_id: str, as_of: str = ""):
+        if as_of:
+            from datetime import datetime
+            try:
+                datetime.fromisoformat(as_of)
+            except ValueError:
+                raise HTTPException(400, "as_of sai định dạng") from None
         r = tools.timeline(app_id, as_of or None)
         if not r:
             raise HTTPException(404, "Không thấy hồ sơ")

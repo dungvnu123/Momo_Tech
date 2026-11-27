@@ -28,7 +28,7 @@ class BackendIntegrationTests(unittest.TestCase):
         db.execute("INSERT INTO apps VALUES (" + ",".join("?" for _ in row) + ")", list(row.values()))
         db.execute("CREATE TABLE transfers (transfer_id,from_wallet,to_id,to_name,to_bank,to_type,amount,created_at,"
                    "recipient_in_contacts,contact_saved_minutes_ago,prior_transfers_to_recipient,simo_flag,to_wallet_age_days,note)")
-        for identifier, timestamp in [("T1", "2026-11-01T08:20:00"), ("T2", "2026-11-03T08:20:00")]:
+        for identifier, timestamp in [("CK00001", "2026-11-01T08:20:00"), ("CK00002", "2026-11-03T08:20:00")]:
             db.execute("INSERT INTO transfers VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                        (identifier, row["phone"], "001234567890", "PRIVATE RECIPIENT", "ACB", "bank", "900000",
                         timestamp, "False", "", "0", "False", "", "PRIVATE NOTE"))
@@ -59,13 +59,13 @@ class BackendIntegrationTests(unittest.TestCase):
         tools = self.tools()
         flow = tools.call("money_flow", {})
         self.assertTrue(flow["ok"])
-        self.assertEqual([t["transfer_id"] for t in flow["data"]["transfers"]], ["T1"])
+        self.assertEqual([t["transfer_id"] for t in flow["data"]["transfers"]], ["CK00001"])
         self.assertEqual([r["report_id"] for r in tools.call("reports_mentioning", {})["data"]["reports"]], ["R1"])
         application = tools.call("get_application", {"app_id": "A"})
         self.assertEqual(application["data"]["victim_self_report_count"], 1)
         self.assertTrue(tools.call("get_application", {"app_id": "app:A"})["ok"])
         serialized = json.dumps([flow, application, tools.call("reports_mentioning", {})])
-        for private in ("0900000001", "001234567890", "PRIVATE", "012345678901", "T2", "R2"):
+        for private in ("0900000001", "001234567890", "PRIVATE", "012345678901", "CK00002", "R2"):
             self.assertNotIn(private, serialized)
         recipient = flow["data"]["recipients"][0]
         self.assertEqual(len(tools.call("account_senders", {"node_id": recipient})["data"]["senders"]), 1)
@@ -100,7 +100,7 @@ class BackendIntegrationTests(unittest.TestCase):
     def test_transfer_uses_real_service_and_maps_context(self):
         model = ScriptedClient(turn("transfer", "transfer_verdict", {
             "decision": "warn", "confidence": 0.8, "reasons": ["New recipient"], "advice": "Check recipient"}))
-        response = self.client(model).post("/api/transfer/check", json={"transfer_id": "T1"})
+        response = self.client(model).post("/api/transfer/check", json={"transfer_id": "CK00001"})
         self.assertEqual(response.status_code, 200, response.text)
         self.assertEqual(response.json()["message_for_customer"], "Check recipient")
         payload = json.loads(model.history[0][1].content)

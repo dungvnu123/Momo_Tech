@@ -1,5 +1,5 @@
 from fastapi import HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from app.core.http import run_ai
 from .. import mock_ai as ai
 from ..store import mask
@@ -8,7 +8,7 @@ from .common import times_reported
 
 def register(app, tools, adapter, META):
     class TransferIn(BaseModel):
-        transfer_id: str
+        transfer_id: str = Field(pattern=r"^CK\d{5,8}$")
 
 
     def transfer_ctx(t):

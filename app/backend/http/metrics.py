@@ -40,4 +40,4 @@ def register(app, tools, adapter, META):
                 "candidate": {"n": len(cand), "fraud": len(cand & fraud), "victims": len(cand & vic)},
                 "cases": {"fraud_flagged": len(mem), "fraud_hit": len(mem & fraud), "victims_as_fraud": len(mem & vic),
                           "benign_as_fraud": len(mem - fraud - vic), "victims_flagged": len(vv), "victims_hit": len(vv & vic)},
-                "time_to_alert": ttd, "rules_baseline": {"n": 61401, "fraud": 54, "victims_as_fraud": 23}, "ai_mode": "gemini"}
+                "time_to_alert": ttd, "rules_baseline": {"n": 61306, "fraud": 54, "victims_as_fraud": 21}, "ai_mode": "gemini"}
