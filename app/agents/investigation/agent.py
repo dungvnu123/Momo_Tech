@@ -21,7 +21,7 @@ class InvestigationAgent(BaseAgent):
     prompt_file = Path(__file__).with_name("prompt.md")
 
     def __init__(self, llm_client, *, database="data/graph.db", max_tool_calls=12,
-                 timeout_seconds=180.0, operation_timeout=30.0, tools_factory=None):
+                 timeout_seconds=180.0, operation_timeout=30.0, tools_factory=None, require_assessments=False):
         super().__init__(llm_client, timeout_seconds=timeout_seconds)
         if type(max_tool_calls) is not int or not 1 <= max_tool_calls <= 12:
             raise ValueError("max_tool_calls must be an integer from 1 to 12")
@@ -31,11 +31,12 @@ class InvestigationAgent(BaseAgent):
         self.max_tool_calls = max_tool_calls
         self.operation_timeout = operation_timeout
         self.tools_factory = tools_factory
+        self.require_assessments = require_assessments
 
     def _get_graph(self):
         if self._graph is None:
             self._graph = create_workflow(self.llm_client, max_tool_calls=self.max_tool_calls,
-                                          operation_timeout=self.operation_timeout)
+                                          operation_timeout=self.operation_timeout, require_assessments=self.require_assessments)
         return self._graph
 
     async def _events(self, app_id: str, context: AgentContext):
@@ -45,8 +46,12 @@ class InvestigationAgent(BaseAgent):
         instruction = f"Điều tra hồ sơ app_id={request.app_id}."
         if request.cluster_id:
             instruction += f"\nCụm ứng viên được cung cấp: cluster_id={request.cluster_id}."
+        prompt = self.system_prompt
+        if self.require_assessments:
+            prompt += "\n\n" + Path(__file__).with_name("assessment_prompt.md").read_text(encoding="utf-8")
         state = {
-            "messages": [ToolMessage(role="system", content=self.system_prompt),
+            "app_id": request.app_id, "cluster_id": request.cluster_id,
+            "messages": [ToolMessage(role="system", content=prompt),
                          ToolMessage(role="user", content=instruction)],
             "tools": self.tools_factory() if self.tools_factory else GraphTools(self.database),
             "calls": [], "steps": [], "turns": 0,

@@ -10,7 +10,7 @@ from app.main import create_app
 from app.middleware.web_security import WebSecurityMiddleware
 from app.security import COOKIE, TTL, WebSecurityPolicy, make_token, valid_token
 from app.services.tool_llm import UnconfiguredToolLLMClient
-from test_investigation import ScriptedClient, submission, turn
+from test_investigation import ScriptedClient, detailed_submission, turn
 
 
 class WebSecurityTests(unittest.TestCase):
@@ -111,7 +111,7 @@ class WebSecurityTests(unittest.TestCase):
         fixture = fixtures.BackendIntegrationTests()
         fixture.setUp()
         self.addCleanup(fixture.doCleanups)
-        model = ScriptedClient(turn("read-1", "get_cluster", {}), turn("finish", "submit_case", submission(
+        model = ScriptedClient(turn("read-1", "cluster_money_flow", {}), turn("finish", "submit_case", detailed_submission(
             verdict="victims", victims=["A"], actions=["Support customer"])))
         app = create_app(tool_llm_client=model, backend_database=fixture.database, service_api_key="",
                          web_password="test-password", web_secret="test-session-key")

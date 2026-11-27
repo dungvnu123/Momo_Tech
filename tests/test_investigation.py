@@ -30,6 +30,17 @@ def submission(source="read-1", **changes):
             "benign_explanation": "Considered legitimate shared-device usage", **changes}
 
 
+def detailed_submission(source="read-1", *, record_id="apps:A", **changes):
+    result = submission(source, **changes)
+    result["cluster_assessment"] = {"level": "insufficient_data", "reason": "The snapshot supports further checks",
+        "evidence": [{"claim": "Cluster scope was read", "source": source}], "limitations": ["Report annotations need verification"]}
+    result["application_assessments"] = [
+        {"app_id": app, "role": role, "reason": "Application-specific snapshot evidence needs review",
+         "evidence": [{"claim": "Observed application evidence", "source": source, "record_ids": [record_id]}]}
+        for role, apps in (("possible_victim", result["victims"]), ("suspected_participant", result["members"])) for app in apps]
+    return result
+
+
 class ScriptedClient:
     def __init__(self, *responses):
         self.responses = iter(responses)

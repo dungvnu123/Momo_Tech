@@ -10,6 +10,17 @@ class DemoInvestigationClient:
     async def complete(self, messages, tools):
         responses = [message for message in messages if message.role == "tool"]
         app_id = messages[1].content.split("app_id=", 1)[1].splitlines()[0].removesuffix(".")
+        if "ASSESSMENT_V2" in messages[0].content:
+            if not responses:
+                return ModelTurn(tool_calls=[ToolCall(id="demo-scope", name="cluster_money_flow", arguments={"app_ids": [app_id]})])
+            return ModelTurn(tool_calls=[ToolCall(id="demo-finish", name="submit_case", arguments={
+                "verdict": "inconclusive", "confidence": 0,
+                "benign_explanation": "Demo chỉ kiểm tra đường đi dữ liệu, không đánh giá gian lận.",
+                "missing_information": ["Chưa chạy suy luận LLM thật."],
+                "cluster_assessment": {"level": "insufficient_data", "reason": "Bản demo không đưa ra nhận định rủi ro.",
+                    "evidence": [{"claim": "Đã đọc tổng hợp phạm vi demo.", "source": "demo-scope"}],
+                    "limitations": ["Luồng demo cố định, không dùng để đánh giá gian lận."]},
+            })])
         stage = len(responses)
         name, arguments = "get_application", {"app_id": app_id}
         if stage:

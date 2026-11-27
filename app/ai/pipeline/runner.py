@@ -31,6 +31,16 @@ class PipelineService:
             raise FileNotFoundError(run_id)
         return json.loads((self.directory / run_id / "result.json").read_text(encoding="utf-8"))
 
+    def read_trace(self, run_id, cluster_id):
+        result = self.read(run_id)
+        item = next((c for c in result["clusters"] if c["cluster_id"] == cluster_id and c.get("trace_file")), None)
+        if item is None:
+            raise FileNotFoundError(cluster_id)
+        path = self.directory / run_id / item["trace_file"]
+        if path.resolve().parent != (self.directory / run_id).resolve():
+            raise FileNotFoundError(cluster_id)
+        return json.loads(path.read_text(encoding="utf-8"))
+
     async def run(self, request: PipelineRequest, *, progress=None):
         if self.lock.locked():
             raise PipelineBusyError("A pipeline run is already active")

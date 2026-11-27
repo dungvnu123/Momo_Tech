@@ -12,7 +12,7 @@ def backend_agent_pipeline():
         learn=[
             "Backend tạo đầu vào; LLM chọn bước đọc; tool chỉ trả dữ liệu có nguồn",
             "Giới hạn 12 tool call, tính cả submit_case; kết luận sai nguồn phải sửa",
-            "Đề xuất xử lý giao dịch tách khỏi kết luận vai trò người vay",
+            "Tách đánh giá cụm, vai trò từng hồ sơ và đề xuất giao dịch; mọi vai trò chưa xác minh",
             "Chỉ phiên completed được lưu; lỗi không ghi đè kết quả cũ",
         ],
     )
@@ -49,7 +49,9 @@ def backend_agent_pipeline():
         explain="Tool đọc đi vào tools_node. submit_case đi vào kiểm chứng kết luận. "
                 "Agent không có tool chuyển tiền, liên hệ khách hay phong tỏa tài khoản.")
     tool = f.process("Tool truy vấn dữ liệu có nguồn", step=9, icon="database", badge="SQLite chỉ đọc",
-        explain="backend/agent_tools.py + evidence/: get_cluster, get_transfer, get_application, money_flow, "
+        explain="backend/agent_tools.py + evidence/: cluster_money_flow tổng hợp cả snapshot bằng SQL, gồm tổng tiền, "
+                "từng hồ sơ, nơi nhận chung và record_id giao dịch/tin báo. Không gửi toàn graph cho LLM. "
+                "Các tool đọc sâu: get_cluster, get_transfer, get_application, money_flow, "
                 "reports_mentioning, account_senders, tech_profile, timeline. "
                 "SQL bị giới hạn phạm vi và thời điểm; che thông tin cá nhân, dùng token nơi nhận theo phiên. "
                 "Chi tiết giao dịch/tin báo/người gửi có phân trang tối đa 50, next_offset khi còn dữ liệu. "
@@ -59,7 +61,10 @@ def backend_agent_pipeline():
                 "Backend đổi event tool_result thành SSE type=step cho giao diện. "
                 "Tool trả lỗi có cấu trúc thì model có thể đổi truy vấn; lỗi/timeout thực thi làm phiên dừng.")
     submit = f.process("submit_case: kết quả có cấu trúc", step=11, icon="check", badge="không trả văn bản suông",
-        explain="CaseSubmission: verdict fraud_ring/victims/benign/inconclusive, summary, evidence, "
+        explain="CaseSubmission tách cluster_assessment (suspicious/no_pattern_observed/insufficient_data) "
+                "và application_assessments (vai trò, lý do, nguồn riêng, dữ liệu thiếu; luôn unverified). "
+                "Cụm suspicious vẫn có thể chưa xác định vai trò cá nhân. Hồ sơ chưa xem riêng được ghi not_assessed. "
+                "Giữ tương thích verdict fraud_ring/victims/benign/inconclusive, summary, evidence, "
                 "benign_explanation, missing_information, actions và transaction_assessments. "
                 "Mỗi đề xuất giao dịch có transfer_id, allow/warn/hold/review, lý do và evidence.source. "
                 "confidence do model tự đánh giá, chưa hiệu chuẩn thành xác suất gian lận.")
@@ -68,6 +73,8 @@ def backend_agent_pipeline():
                 "app_id đã quan sát, members/victims không chồng nhau và bảo vệ người tự báo bị lừa. "
                 "evidence/validation.py kiểm tra đúng giao dịch gây cảnh báo và nguồn chứa giao dịch đó. "
                 "hold cần SIMO hoặc cảnh báo nơi nhận có phạm vi đã xác minh; mock/khớp số ngân hàng chưa đủ. "
+                "assessments.py yêu cầu tổng hợp đủ phạm vi, kiểm tra record_ids thuộc tool được dẫn và đúng hồ sơ; "
+                "không dùng bản ghi B để gán vai trò A. Đây là kiểm tra nguồn, không xác nhận sự thật của suy luận. "
                 "inconclusive phải nêu cụ thể thông tin thiếu. Các kiểm tra không gán verdict hay confidence cố định.")
     repair = f.process("Phản hồi lỗi để model sửa", step=13, icon="alert", badge="invalid_case",
         explain="Trả error.fields/message, available_evidence_sources và observed_app_ids về model. "
@@ -95,7 +102,9 @@ def backend_agent_pipeline():
                 "Controller gửi data: JSON qua text/event-stream; các bước trước đó đã gửi type=step. "
                 "Middleware chuyển tiếp chunk, không gom hết stream mới trả.")
     ui = f.process("Giao diện và đội rủi ro xem", step=19, icon="user", badge="showCase",
-        explain="web/app.js: EventSource nhận step/case, hiển thị đề xuất giao dịch, bằng chứng, giả thuyết vô hại, "
+        explain="web/app.js + case_evidence.js: EventSource nhận step/case, hiển thị đánh giá cụm, vai trò từng hồ sơ, "
+                "số hồ sơ đã đánh giá và phần chưa đánh giá. Bấm Xem nguồn để đối chiếu ToolStep đã lưu: "
+                "mã hồ sơ/giao dịch/tin báo, số tiền, thời điểm và độ phủ. Hiển thị đề xuất giao dịch, giả thuyết vô hại, "
                 "thông tin thiếu và việc cần làm. Vai trò inconclusive không trình bày như xác suất 50%. "
                 "Phiên lỗi được ghi là chưa hoàn thành. Đội rủi ro xác minh và quyết định ngoài Agent.")
     end = f.end("Hoàn tất / chờ xác minh")

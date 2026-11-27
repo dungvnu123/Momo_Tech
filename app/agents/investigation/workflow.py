@@ -9,9 +9,12 @@ from app.services.tool_llm import ModelTurn, ToolMessage
 from app.tools import GraphTools
 
 from .schemas import CaseSubmission, ToolStep, submit_definition
+from .assessments import validate_assessments
 
 
 class InvestigationState(TypedDict):
+    app_id: str
+    cluster_id: str | None
     messages: list[ToolMessage]
     tools: GraphTools
     calls: list
@@ -66,7 +69,7 @@ def validate_submission(arguments: dict, steps: list[ToolStep]) -> CaseSubmissio
     return case
 
 
-def create_workflow(client, *, max_tool_calls: int, operation_timeout: float):
+def create_workflow(client, *, max_tool_calls: int, operation_timeout: float, require_assessments=False):
     async def model_node(state: InvestigationState):
         remaining = max_tool_calls - len(state["steps"])
         definitions = [submit_definition()] if remaining == 1 else state["tools"].definitions + [submit_definition()]
@@ -104,6 +107,8 @@ def create_workflow(client, *, max_tool_calls: int, operation_timeout: float):
         if call.name == "submit_case":
             try:
                 candidate = validate_submission(call.arguments, steps)
+                scope = state["tools"].assessment_scope(state["app_id"], state.get("cluster_id")) if require_assessments else known_applications(steps)
+                candidate = validate_assessments(candidate, steps, scope, required=require_assessments)
                 if hasattr(state["tools"], "validate_case"):
                     state["tools"].validate_case(candidate, steps)
                 case = candidate

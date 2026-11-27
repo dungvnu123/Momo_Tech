@@ -150,11 +150,12 @@ class GraphToolTests(unittest.TestCase):
         definitions = self.tools.definitions
         self.assertEqual({item["name"] for item in definitions},
                          {"get_application", "neighbors", "money_flow", "get_evidence", "get_cluster",
-                          "account_senders", "reports_mentioning", "timeline", "tech_profile", "entity_info"})
+                          "account_senders", "reports_mentioning", "timeline", "tech_profile", "entity_info", "cluster_money_flow"})
         for definition in definitions:
             self.assertFalse(definition["parameters"]["additionalProperties"])
             self.assertNotIn("handler", definition)
-        self.assertEqual(definitions[1]["parameters"]["properties"]["limit"]["maximum"], 50)
+        neighbors = next(item for item in definitions if item["name"] == "neighbors")
+        self.assertEqual(neighbors["parameters"]["properties"]["limit"]["maximum"], 50)
 
 
 if __name__ == "__main__":

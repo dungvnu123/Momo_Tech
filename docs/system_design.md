@@ -130,8 +130,21 @@ trong mỗi lần phát lại toàn bộ sự kiện. Chi tiết triển khai: `
 | `investigate(cluster, tools, as_of)` | Ảnh chụp cụm lúc cảnh báo | Từng bước + `case`: `fraud_ring`/`victims`/`benign`/`inconclusive`, thành viên, nạn nhân, bằng chứng, việc cần làm | **Chỉ thấy dữ liệu tới `as_of`**. Thử giả thuyết vô hại trước. Phân biệt nạn nhân: chính thành viên trong cụm tự kể bị lừa |
 
 **Tool chỉ đọc của backend** (`app/backend/agent_tools.py`, khóa `as_of` theo snapshot):
-`get_cluster`, `get_transfer`, `get_application`, `tech_profile`, `money_flow`,
+`cluster_money_flow`, `get_cluster`, `get_transfer`, `get_application`, `tech_profile`, `money_flow`,
 `account_senders`, `reports_mentioning`, `timeline`. Agent không có quyền hành động thật.
+
+**Đánh giá chi tiết hiện tại:** tool tổng hợp dòng tiền cả cụm có mã bản ghi
+nguồn; đầu ra tách mức nghi vấn của cụm khỏi vai trò từng hồ sơ và ghi rõ
+phần chưa đánh giá. Mọi vai trò đều chưa xác minh. Xem
+[đánh giá cụm và vai trò](cluster_assessments.md).
+
+**Kho tri thức và việc “học”:** graph lưu dấu vết từ tin báo (tài khoản, số
+điện thoại, URL/tên miền), quan hệ giao dịch và nhận định có nguồn. Bổ sung
+dữ liệu giúp truy vấn có thêm ngữ cảnh; hiện không có huấn luyện/fine-tune
+model tự động hay vòng học online từ toàn bộ giao dịch. API Lá chắn trả phân
+tích; pipeline mới kiểm tra nguồn rồi ghi graph. Luồng tự ghi mọi tin người
+dùng vừa gửi vào kho chung chưa được nối đầy đủ. Chi tiết:
+[tích hợp dữ liệu và graph](ai_pipeline.md#tích-hợp-dữ-liệu-và-graph).
 
 **Hợp nhất thực thể mờ** (C: "Ng V. A" = "Nguyễn Văn A") là việc AI nên làm thêm — hiện C mất **27 ngày** mới bị cảnh báo vì phải đủ 5 hồ sơ chung thiết bị.
 

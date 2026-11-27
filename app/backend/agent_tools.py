@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from .evidence.reports import report_views
 from .evidence.transactions import money_flow, transaction_rows, transaction_view
 from .evidence.validation import validate_case
+from .evidence.cluster_money import cluster_money_flow
 
 
 class Arguments(BaseModel):
@@ -20,12 +21,14 @@ class Arguments(BaseModel):
 
 class BackendAgentTools:
     parameter_fields = {
+        "cluster_money_flow": ("cluster_id", "app_ids", "offset", "limit"),
         "get_cluster": ("cluster_id",), "get_application": ("app_id",),
         "tech_profile": ("app_ids",), "money_flow": ("app_ids", "offset", "limit"),
         "reports_mentioning": ("offset", "limit"), "account_senders": ("node_id", "offset", "limit"),
         "timeline": ("app_id",), "get_transfer": ("transfer_id",),
     }
     descriptions = {
+        "cluster_money_flow": "Read cluster-wide money aggregates, per-application summaries, shared recipients and source record IDs at the alert time. No arguments needed for full alert scope; paginate transfer evidence with limit/offset.",
         "get_cluster": "Read the alert snapshot, scoped application IDs and signals. No arguments needed.",
         "get_application": "Read safe application fields; supply app_id from the snapshot.",
         "tech_profile": "Read aggregate technical signals for app_ids, or the snapshot by default.",
@@ -63,6 +66,9 @@ class BackendAgentTools:
     def reports(self):
         return report_views(self)
 
+    def assessment_scope(self, app_id, cluster_id=None):
+        return self.ids
+
     def validate_case(self, case, steps):
         validate_case(self, case, steps)
 
@@ -84,7 +90,11 @@ class BackendAgentTools:
                 raise ValueError("Outside snapshot")
             if args.app_id and args.app_id not in self.readable_ids:
                 raise ValueError("Outside snapshot")
-            if name == "get_cluster":
+            if name == "cluster_money_flow":
+                if len(ids) != len(set(ids)):
+                    raise ValueError("Duplicate application scope")
+                data = cluster_money_flow(self, ids, limit=args.limit, offset=args.offset)
+            elif name == "get_cluster":
                 data = {"cluster_id": self.alert["cluster_id"], "app_ids": self.ids[:100],
                         "size": len(self.ids), "signals": self.alert["signals"],
                         "alert_kind": self.alert.get("kind"), "alert_id": self.alert["alert_id"],

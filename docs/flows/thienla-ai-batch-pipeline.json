@@ -111,7 +111,7 @@
       "id": "p8",
       "type": "process",
       "label": "Agent điều tra cụm được giữ",
-      "explain": "InvestigationAgent kế thừa BaseAgent dùng GraphTools trên graph riêng. Vẫn tối đa 12 tool call/phiên và kiểm tra bằng chứng. Cụm investigate vượt ngân sách được ghi deferred_by_limit, không giả thành đã điều tra.",
+      "explain": "InvestigationAgent kế thừa BaseAgent dùng GraphTools trên graph riêng. cluster_money_flow tổng hợp toàn bộ giao dịch của cụm, kèm nguồn và độ phủ. Kết quả tách đánh giá cụm khỏi vai trò từng hồ sơ; mọi vai trò unverified và dẫn đúng app_id/record_id. Hồ sơ chưa đánh giá ghi rõ not_assessed. Vẫn tối đa 12 tool call/phiên. Cụm vượt ngân sách được ghi deferred_by_limit.",
       "step": 7,
       "color": "",
       "x": null,
@@ -124,7 +124,7 @@
       "id": "p9",
       "type": "process",
       "label": "Lưu báo cáo và đánh giá sau chạy",
-      "explain": "result.json giữ trạng thái từng stage, timing, coverage, cache hit, trace và kết quả từng cụm. GET /api/ai/pipeline/runs/{run_id} để đọc lại. Chỉ module đánh giá sau chạy mới đọc đáp án. Chấm trên mẫu đã chọn; không tuyên bố recall toàn bộ 200.000 hồ sơ.",
+      "explain": "result.json giữ trạng thái stage, timing, coverage, cache hit, trace và kết quả từng cụm. GET /api/ai/pipeline/runs/{run_id}; thêm /traces/{cluster_id} để đối chiếu tool nguồn. Chấm riêng mức nghi vấn cụm, vai trò đã đánh giá/chưa đánh giá và verdict cũ. Chỉ module sau chạy đọc đáp án; không tuyên bố recall toàn bộ 200.000 hồ sơ.",
       "step": 8,
       "color": "",
       "x": null,
@@ -246,7 +246,7 @@
     {
       "n": 7,
       "title": "Agent điều tra cụm được giữ",
-      "body": "InvestigationAgent kế thừa BaseAgent dùng GraphTools trên graph riêng. Vẫn tối đa 12 tool call/phiên và kiểm tra bằng chứng. Cụm investigate vượt ngân sách được ghi deferred_by_limit, không giả thành đã điều tra.",
+      "body": "InvestigationAgent kế thừa BaseAgent dùng GraphTools trên graph riêng. cluster_money_flow tổng hợp toàn bộ giao dịch của cụm, kèm nguồn và độ phủ. Kết quả tách đánh giá cụm khỏi vai trò từng hồ sơ; mọi vai trò unverified và dẫn đúng app_id/record_id. Hồ sơ chưa đánh giá ghi rõ not_assessed. Vẫn tối đa 12 tool call/phiên. Cụm vượt ngân sách được ghi deferred_by_limit.",
       "note": "",
       "note_type": "info",
       "badge": ""
@@ -254,7 +254,7 @@
     {
       "n": 8,
       "title": "Lưu báo cáo và đánh giá sau chạy",
-      "body": "result.json giữ trạng thái từng stage, timing, coverage, cache hit, trace và kết quả từng cụm. GET /api/ai/pipeline/runs/{run_id} để đọc lại. Chỉ module đánh giá sau chạy mới đọc đáp án. Chấm trên mẫu đã chọn; không tuyên bố recall toàn bộ 200.000 hồ sơ.",
+      "body": "result.json giữ trạng thái stage, timing, coverage, cache hit, trace và kết quả từng cụm. GET /api/ai/pipeline/runs/{run_id}; thêm /traces/{cluster_id} để đối chiếu tool nguồn. Chấm riêng mức nghi vấn cụm, vai trò đã đánh giá/chưa đánh giá và verdict cũ. Chỉ module sau chạy đọc đáp án; không tuyên bố recall toàn bộ 200.000 hồ sơ.",
       "note": "",
       "note_type": "info",
       "badge": ""

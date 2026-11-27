@@ -10,7 +10,7 @@ from app.backend.agent_tools import BackendAgentTools
 from app.backend.store import Tools
 from app.main import create_app
 from app.services.tool_llm import ModelTurn, ToolCall
-from test_investigation import ScriptedClient, submission, turn
+from test_investigation import ScriptedClient, submission, detailed_submission, turn
 
 
 class BackendIntegrationTests(unittest.TestCase):
@@ -108,7 +108,7 @@ class BackendIntegrationTests(unittest.TestCase):
         self.assertNotIn("PRIVATE", model.history[0][1].content)
 
     def test_sse_investigation_uses_base_agent_and_persists_case(self):
-        model = ScriptedClient(turn("read-1", "get_cluster", {}), turn("finish", "submit_case", submission(
+        model = ScriptedClient(turn("read-1", "cluster_money_flow", {}), turn("finish", "submit_case", detailed_submission(
             verdict="victims", victims=["A"], actions=["Support customer"])))
         client = self.client(model)
         response = client.get("/api/alerts/AL1/investigate")

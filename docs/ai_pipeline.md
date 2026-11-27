@@ -84,7 +84,7 @@ quyết định gốc để kiểm tra. Dựng lại graph bằng `--replace` s�
 
 ## Agent và bộ tool
 
-Agent có 10 tool đọc: get_application, neighbors, money_flow, get_evidence,
+Agent có 11 tool đọc: cluster_money_flow, get_application, neighbors, money_flow, get_evidence,
 get_cluster, account_senders, reports_mentioning, timeline, tech_profile,
 entity_info; tool kết thúc là submit_case. Nếu có cluster_id, Agent được
 cung cấp phạm vi cụm để dùng truy vấn theo lô, không phải dò từng hồ sơ từ đầu.
