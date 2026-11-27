@@ -24,10 +24,13 @@ Mở http://localhost:4420 — 4 màn: **Tổng quan** (phễu + so với luật
 
 **Phần AI** nằm gọn trong [app/ai.py](app/ai.py): 4 hàm `analyze_report`, `check_transfer`, `triage_clusters`,
 `investigate`. Hiện là **bản giả lập bằng luật** (`MODE = "mock"`, không gọi model, không đọc đáp án); người làm AI
-thay thân 4 hàm, giữ nguyên tên + kiểu trả về (schema ở `docs/system_design.md` mục 4). Tool chỉ đọc cho agent: [app/tools.py](app/tools.py).
+thay thân 4 hàm, giữ nguyên tên + kiểu trả về (schema ở `docs/system_design.md` mục 5). Tool chỉ đọc cho agent: [app/tools.py](app/tools.py).
 
-Kết quả bản giả lập (mốc để AI phải vượt): kết luận 399 hồ sơ là kẻ gian, đúng 57/58 nhưng **nhầm 341 hồ sơ vô hại**;
-nhận ra 22/28 nạn nhân.
+Kết quả bản giả lập (mốc để AI phải vượt): kết luận 356 hồ sơ là kẻ gian, đúng 58/58, không nhầm nạn nhân nào, nhưng
+**nhầm 298 hồ sơ vô hại**; nhận ra 22/28 nạn nhân.
+
+**Bảo mật:** đặt `THIENLA_PASSWORD` (và `THIENLA_SECRET`, `THIENLA_BEHIND_PROXY=1` khi sau Caddy) trước khi chạy ở nơi
+khác máy mình — không đặt thì màn đội rủi ro mở (chế độ dev). Chi tiết: `docs/system_design.md` mục 9.
 
 ## Luồng trình chiếu (feature-flow)
 Dựng bằng [feature-flow](https://github.com/hoangvunghi/feature-flow), quản lý môi trường bằng `uv`:

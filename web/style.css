@@ -97,6 +97,12 @@ textarea:focus { outline: none; border-color: var(--pink-2); }
 .case.empty { border-style: dashed; color: var(--muted); }
 @keyframes in { from { opacity: 0; transform: translateY(6px); } }
 
+/* đăng nhập */
+.login { border: 0; border-radius: var(--radius); padding: 26px; width: min(420px, 92vw); box-shadow: 0 20px 60px rgba(165, 0, 100, .25); }
+.login::backdrop { background: rgba(43, 26, 36, .45); backdrop-filter: blur(3px); }
+.login input { width: 100%; font: inherit; border: 1.5px solid var(--pink-line); border-radius: 12px; padding: 10px 12px; margin: 6px 0 12px; }
+.login .err { color: var(--red); margin: -4px 0 10px; font-size: 13px; }
+
 /* hồ sơ + dòng thời gian */
 .dossier { border: 1.5px solid var(--pink-line); border-radius: 14px; padding: 14px 16px; margin-bottom: 16px; background: #fffafd; }
 .dossier header { display: flex; justify-content: space-between; align-items: start; gap: 10px; }

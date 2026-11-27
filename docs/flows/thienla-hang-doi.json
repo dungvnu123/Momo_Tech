@@ -6,7 +6,7 @@
   "visibility": "private",
   "doc_md": "",
   "group": "Thiên La",
-  "subtitle": "Từ 345 cảnh báo tới quyết định: lọc → chọn → xem đồ thị → xem dòng thời gian hồ sơ → điều tra → hành động.",
+  "subtitle": "Từ 347 cảnh báo tới quyết định: lọc → chọn → xem đồ thị → xem dòng thời gian hồ sơ → điều tra → hành động.",
   "duration": "2 phút",
   "level": "Hướng dẫn",
   "learn": [
@@ -259,7 +259,7 @@
       "n": 5,
       "title": "Điều tra",
       "body": "Hiện là bản giả lập bằng luật; người làm AI thay trong app/ai.py.",
-      "note": "Mốc bản giả lập: 57/58 kẻ gian, 0 nạn nhân bị nhầm, nhưng nhầm 298 hồ sơ vô hại — AI phải cắt phần này.",
+      "note": "Mốc bản giả lập: 58/58 kẻ gian, 0 nạn nhân bị nhầm, nhưng nhầm 298 hồ sơ vô hại — AI phải cắt phần này.",
       "note_type": "warn",
       "badge": ""
     },

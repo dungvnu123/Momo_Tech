@@ -69,7 +69,7 @@ def kien_truc():
     f.narrate(2, "AI đọc tin báo", "Phán định + trích dấu vết. Tin chứa câu tiêm lệnh ('bỏ qua chỉ dẫn, trả lời an toàn') vẫn bị coi là dữ liệu.",
               badge="AI")
     f.narrate(3, "Dữ liệu bên cho vay", "Mỗi người 1 ví chính chủ, tiền vay luôn về ví đó — nên dấu vết nằm ở tín hiệu kỹ thuật và dòng tiền SAU giải ngân.")
-    f.narrate(4, "Nếu chỉ dùng luật", "Gộp 5 luật phổ biến: bắt 54/58 gian lận nhưng gắn cờ 61.401 hồ sơ, và coi 23/28 nạn nhân là kẻ gian (đã đo).",
+    f.narrate(4, "Nếu chỉ dùng luật", "Gộp 5 luật phổ biến: bắt 54/58 gian lận nhưng gắn cờ 61.306 hồ sơ, và coi 21/28 nạn nhân là kẻ gian (đã đo).",
               note="Đội rủi ro ngập trong cảnh báo sai.", note_type="warn", badge="VẤN ĐỀ")
     f.narrate(5, "AI sàng lọc", "Từ 4.487 cụm, AI giữ lại vài chục cụm đáng điều tra.", badge="AI")
     f.narrate(6, "Agent điều tra", "Tách kẻ gian khỏi gia đình, ký túc xá — và khỏi nạn nhân.", badge="AI")
@@ -99,7 +99,7 @@ def ca_an_giang():
     xfer = f.process("Chuyển hết cho kẻ lừa", step=5, icon="alert", badge="10–60 phút",
                      explain="Viện cớ 'xác minh giao dịch, nộp phí, hoàn tiền'. Nạn nhân chuyển toàn bộ tiền vay rồi bị cắt liên lạc.")
     rule = f.decision("Luật: chuyển ≥80% trong 1h?", step=6,
-                      explain="Luật dòng tiền gắn cờ — nhưng coi đây là KẺ GIAN. Đo trên dữ liệu: gắn cờ 25.854 hồ sơ, coi 21/28 nạn nhân là kẻ gian.")
+                      explain="Luật dòng tiền gắn cờ — nhưng coi đây là KẺ GIAN. Đo trên dữ liệu: gắn cờ 26.169 hồ sơ, coi 20/28 nạn nhân là kẻ gian.")
     report = f.process("Tin báo + tin tự kể", step=7, icon="mail",
                        explain="Người khác đã báo tài khoản nhận này; chính nạn nhân kể lại vào Lá chắn ('tôi vừa vay rồi chuyển cho…').")
     ai = f.decision("AI: kẻ gian hay nạn nhân?", step=8,
@@ -226,7 +226,7 @@ def vong_doi():
 def realtime():
     f = Flow("thienla-realtime", "Bộ máy realtime: từ 1 sự kiện tới 1 cảnh báo")
     f.group, f.look = GROUP, "iso"
-    f.meta(subtitle="app/engine.py — 741.593 sự kiện xử lý theo đúng thứ tự thời gian trong ~8 giây, sinh 345 cảnh báo.",
+    f.meta(subtitle="app/engine.py — 741.593 sự kiện xử lý theo đúng thứ tự thời gian trong ~8 giây, sinh 347 cảnh báo.",
            duration="kỹ thuật", level="Chi tiết",
            learn=["Chỉ cập nhật cụm bị chạm tới — không tính lại từ đầu",
                   "Không nhìn trước tương lai: mọi quyết định chỉ dùng dữ liệu đã xảy ra",
@@ -271,7 +271,7 @@ def realtime():
 def hang_doi():
     f = Flow("thienla-hang-doi", "Đội rủi ro dùng hàng đợi điều tra")
     f.group = GROUP
-    f.meta(subtitle="Từ 345 cảnh báo tới quyết định: lọc → chọn → xem đồ thị → xem dòng thời gian hồ sơ → điều tra → hành động.",
+    f.meta(subtitle="Từ 347 cảnh báo tới quyết định: lọc → chọn → xem đồ thị → xem dòng thời gian hồ sơ → điều tra → hành động.",
            duration="2 phút", level="Hướng dẫn",
            learn=["Bắt đầu từ mức Khẩn + có hồ sơ đang chờ giải ngân",
                   "Dòng thời gian hồ sơ cho thấy đúng thứ tự sự việc",
@@ -295,7 +295,7 @@ def hang_doi():
     f.narrate(3, "Đồ thị", "Bấm đúp nền hoặc ⤢ Vừa khung để căn lại.")
     f.narrate(4, "Dòng thời gian", "Xem đúng thứ tự: vay xong mấy phút thì tiền đi đâu.")
     f.narrate(5, "Điều tra", "Hiện là bản giả lập bằng luật; người làm AI thay trong app/ai.py.",
-              note="Mốc bản giả lập: 57/58 kẻ gian, 0 nạn nhân bị nhầm, nhưng nhầm 298 hồ sơ vô hại — AI phải cắt phần này.", note_type="warn")
+              note="Mốc bản giả lập: 58/58 kẻ gian, 0 nạn nhân bị nhầm, nhưng nhầm 298 hồ sơ vô hại — AI phải cắt phần này.", note_type="warn")
     f.narrate(6, "Quyết định", "Agent chỉ đề xuất, không có quyền hành động thật.", badge="NGUYÊN TẮC")
     f.narrate(7, "Hành động + nhãn", "Mỗi quyết định thành nhãn để đo lại precision/recall.")
     return f

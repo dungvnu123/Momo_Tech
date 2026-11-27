@@ -12,7 +12,7 @@ MODE = "mock"   # đổi thành "claude" khi đã cắm model thật
 
 OFFICIAL = "FinVay"   # thương hiệu hư cấu trong dữ liệu mô phỏng
 INJECTION = re.compile(r"(?i)(bo qua moi chi dan|\[system\]|assistant must|ghi chu cho ai)")
-SCAM_HINT = re.compile(r"(?i)(chuyen|nop|ck|stk|\btk\b|vi momo|phi kich hoat|giam 50|tat toan|cong an|khoi kien|xac minh|kich hoat)")
+SCAM_HINT = re.compile(r"(?i)(chuyen|nop|ck|stk|\btk\b|momo|thanh toan ngay|truy cap|phi kich hoat|giam 50|tat toan|cong an|khoi kien|xac minh|kich hoat)")
 VICTIM_HINT = re.compile(r"(?i)(toi bi lua|toi vua vay|toi da mat|nho .* ho tro|mat tien|khong goi duoc|chan lien lac)")
 LEGIT_HINT = re.compile(r"(?i)(khong yeu cau chuyen khoan|ma otp cua ban|cam on quy khach da thanh toan)")
 URL_RE = re.compile(r"(?i)\b(?:https?://)?((?:[a-z0-9-]+\.)+(?:com|net|top|vn|ly)(?:/[\w-]+)?)")

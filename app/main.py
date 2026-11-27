@@ -9,13 +9,13 @@ import json
 import os
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from feature_flow import create_app
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
-from . import ai
+from . import ai, security
 from .tools import Tools, mask
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -23,13 +23,38 @@ DB = ROOT / os.environ.get("THIENLA_DB", "thienla.db")
 if not DB.exists():
     raise SystemExit(f"Chưa có {DB.name} — chạy: uv run python build.py")
 tools = Tools(DB)
-app = FastAPI(title="Thiên La")
+app = FastAPI(title="Thiên La", docs_url=None, redoc_url=None, openapi_url=None)   # không lộ sơ đồ API ra ngoài
+app.middleware("http")(security.guard)
 META = {r["k"]: json.loads(r["v"]) for r in tools.q("SELECT k, v FROM meta")}
 
 
 # ── Lá chắn ─────────────────────────────────────────────────────────────────────────
 class ReportIn(BaseModel):
-    text: str
+    text: str = Field(max_length=4000)
+
+
+class LoginIn(BaseModel):
+    password: str = Field(max_length=200)
+
+
+@app.post("/api/login")
+def login(body: LoginIn, request: Request, response: Response):
+    if not security.check_password(body.password):
+        raise HTTPException(401, "Sai mật khẩu")
+    response.set_cookie(security.COOKIE, security.make_token(), max_age=security.TTL, httponly=True, samesite="strict",
+                        secure=request.url.scheme == "https" or bool(os.environ.get("THIENLA_BEHIND_PROXY")))
+    return {"ok": True}
+
+
+@app.post("/api/logout")
+def logout(response: Response):
+    response.delete_cookie(security.COOKIE)
+    return {"ok": True}
+
+
+@app.get("/api/me")
+def me(request: Request):
+    return {"auth_required": bool(security.PASSWORD), "logged_in": security.valid_token(request.cookies.get(security.COOKIE))}
 
 
 def times_reported(ids):
@@ -67,7 +92,7 @@ def shield_samples():
 
 # ── Cảnh báo lúc chuyển tiền ──────────────────────────────────────────────────────────
 class TransferIn(BaseModel):
-    transfer_id: str
+    transfer_id: str = Field(pattern=r"^CK\d{5,8}$")
 
 
 def transfer_ctx(t):
@@ -136,6 +161,8 @@ def alert_row(r):
 def alerts(day: str = "", date_from: str = "", date_to: str = "", severity: str = "", kind: str = "", verdict: str = "",
            min_conf: float = 0, latest: bool = True, q: str = "", sort: str = "priority", limit: int = 200,
            hour_from: int = 0, hour_to: int = 24):
+    limit = max(1, min(limit, 500))
+    hour_from, hour_to = max(0, min(hour_from, 24)), max(0, min(hour_to, 24))
     where, p = ["1=1"], []
     if hour_from > 0 or hour_to < 24:   # khung giờ trong ngày [hour_from, hour_to)
         where.append("CAST(substr(ts, 12, 2) AS INT) >= ? AND CAST(substr(ts, 12, 2) AS INT) < ?"); p += [hour_from, hour_to]
@@ -217,6 +244,11 @@ def alert_detail(aid: str):
 
 @app.get("/api/apps/{app_id}")
 def app_timeline(app_id: str, as_of: str = ""):
+    if as_of:
+        try:
+            __import__("datetime").datetime.fromisoformat(as_of)
+        except ValueError:
+            raise HTTPException(400, "as_of sai định dạng")
     r = tools.timeline(app_id, as_of or None)
     if not r:
         raise HTTPException(404, "Không thấy hồ sơ")
@@ -241,6 +273,11 @@ async def live(start: str = "2026-11-01", day_seconds: float = 12):
     """Phát lại realtime: đồng hồ mô phỏng chạy nhanh (1 ngày = day_seconds giây), đẩy cảnh báo đúng lúc nó sinh ra.
     Cảnh báo do app/engine.py sinh khi xử lý từng sự kiện theo thời gian; chạy thật thì engine đọc thẳng hàng đợi sự kiện."""
     from datetime import datetime, timedelta
+    try:
+        datetime.fromisoformat(start)
+    except ValueError:
+        raise HTTPException(400, "Ngày bắt đầu sai định dạng (YYYY-MM-DD)")
+    day_seconds = max(1.0, min(day_seconds, 120.0))
     rows = [alert_row(r) for r in tools.q("SELECT * FROM alerts WHERE ts >= ? ORDER BY ts", start)]
     end = datetime.fromisoformat(META["last_day"]) + timedelta(days=1)
 
@@ -294,7 +331,7 @@ def metrics():
             "candidate": {"n": len(cand), "fraud": len(cand & fraud), "victims": len(cand & vic)},
             "cases": {"fraud_flagged": len(mem), "fraud_hit": len(mem & fraud), "victims_as_fraud": len(mem & vic),
                       "benign_as_fraud": len(mem - fraud - vic), "victims_flagged": len(vv), "victims_hit": len(vv & vic)},
-            "time_to_alert": ttd, "rules_baseline": {"n": 61401, "fraud": 54, "victims_as_fraud": 23}, "ai_mode": ai.MODE}
+            "time_to_alert": ttd, "rules_baseline": {"n": 61306, "fraud": 54, "victims_as_fraud": 21}, "ai_mode": ai.MODE}
 
 
 app.mount("/flows", create_app(ROOT / "docs" / "flows", can_edit=False, guides=False, title="Thiên La — luồng",

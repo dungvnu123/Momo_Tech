@@ -222,7 +222,7 @@ for i in range(8):
     p = person()
     addr = address()
     day = D1 - timedelta(days=rng.randint(0, 20)) if i < 6 else D1 - timedelta(days=rng.randint(0, 1))
-    dev = a_devs[i % 2] if i in (1, 3, 6, 7) else device()   # 2 hồ sơ PENDING chỉ lộ qua thiết bị chung
+    dev = a_devs[{1: 0, 6: 0, 3: 1, 7: 1}[i]] if i in (1, 3, 6, 7) else device()   # mỗi hồ sơ PENDING (6, 7) chung máy với 1 hồ sơ đã giải ngân
     ring_a.append(add_app(p, addr, rng.randint(0, 3), dev, [rand_ref(), rand_ref()], day,
                           "DISBURSED" if i < 6 else "PENDING", 45 if i < 6 else "",   # bán ví rồi → không trả
                           tech={"wallet_age_days": rng.randint(60, 900)},   # ví cũ của người bán ví

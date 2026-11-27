@@ -3,11 +3,34 @@ const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const vnd = (n) => Number(n).toLocaleString("vi-VN") + " đ";
 const num = (n) => Number(n).toLocaleString("vi-VN");
-const api = async (path, body) => {
+const api = async (path, body, retried) => {
   const r = await fetch("api/" + path, body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {});
+  if (r.status === 401 && !retried && path !== "login") { await askLogin(); return api(path, body, true); }
   if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.statusText);
   return r.json();
 };
+
+// ── đăng nhập (cookie HttpOnly do server đặt; JS không đọc được phiên) ──────────────
+let loginWait = null;
+function askLogin() {
+  if (loginWait) return loginWait;
+  const dlg = $("#login");
+  loginWait = new Promise((resolve, reject) => {
+    dlg.oncancel = () => { loginWait = null; reject(new Error("Cần đăng nhập để xem phần này")); };   // Esc = huỷ, không treo
+    $("#login-form").onsubmit = async (e) => {
+      e.preventDefault();
+      try {
+        await api("login", { password: $("#login-pw").value }, true);
+        $("#login-pw").value = ""; $("#login-err").hidden = true; dlg.close(); $("#logout").hidden = false;
+        loginWait = null; resolve();
+      } catch (err) { $("#login-err").hidden = false; $("#login-err").textContent = err.message; }
+    };
+  });
+  dlg.showModal();
+  return loginWait;
+}
+$("#logout").onclick = async () => { await api("logout", {}); location.reload(); };
+api("me").then((m) => { $("#logout").hidden = !(m.auth_required && m.logged_in); }).catch(() => {});
 
 // ── tab ───────────────────────────────────────────────────────────────────────────
 const loaded = {};
