@@ -1,0 +1,287 @@
+{
+  "id": "thienla-agent-dieu-tra",
+  "title": "Agent Thám tử điều tra 1 cụm",
+  "kind": "flow",
+  "look": "flat",
+  "visibility": "private",
+  "doc_md": "",
+  "group": "Thiên La",
+  "subtitle": "Vòng lặp tool use có giới hạn: thử vô hại trước, bằng chứng phải trỏ tới bước thật.",
+  "duration": "kỹ thuật",
+  "level": "Chi tiết",
+  "learn": [
+    "Tối đa 12 lượt tool rồi buộc kết luận",
+    "Giả thuyết vô hại được thử TRƯỚC",
+    "Bằng chứng không trỏ tới tool_call thật thì bị loại"
+  ],
+  "notes": [],
+  "nodes": [
+    {
+      "id": "s1",
+      "type": "start",
+      "label": "",
+      "explain": "",
+      "step": 0,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "",
+      "badge": ""
+    },
+    {
+      "id": "p2",
+      "type": "process",
+      "label": "Nhận cụm + tóm tắt sàng lọc",
+      "explain": "",
+      "step": 1,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "file",
+      "badge": ""
+    },
+    {
+      "id": "p3",
+      "type": "process",
+      "label": "Đặt giả thuyết vô hại trước",
+      "explain": "Gia đình? Ký túc xá? VPN công ty? Vừa đổi SIM? Rút về ngân hàng chính chủ?",
+      "step": 2,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "",
+      "badge": ""
+    },
+    {
+      "id": "p4",
+      "type": "process",
+      "label": "Gọi tool đọc",
+      "explain": "money_flow · account_senders · tech_profile · reports_mentioning · timeline · neighbors · entity_info",
+      "step": 3,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "api",
+      "badge": ""
+    },
+    {
+      "id": "d5",
+      "type": "decision",
+      "label": "Giả thuyết còn đứng?",
+      "explain": "So bằng chứng mới với giả thuyết hiện tại; bác bỏ thì đổi hướng điều tra.",
+      "step": 4,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "",
+      "badge": ""
+    },
+    {
+      "id": "d6",
+      "type": "decision",
+      "label": "Đủ bằng chứng hoặc hết 12 lượt?",
+      "explain": "",
+      "step": 5,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "",
+      "badge": ""
+    },
+    {
+      "id": "p7",
+      "type": "process",
+      "label": "submit_case",
+      "explain": "verdict: fraud_ring | victims | benign | inconclusive. Hết lượt mà chưa kết luận → inconclusive.",
+      "step": 6,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "check",
+      "badge": ""
+    },
+    {
+      "id": "d8",
+      "type": "decision",
+      "label": "Bằng chứng trỏ tới tool_call thật?",
+      "explain": "Code kiểm tra từng bằng chứng; cái nào bịa nguồn thì bị loại khỏi hồ sơ.",
+      "step": 7,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "",
+      "badge": ""
+    },
+    {
+      "id": "p9",
+      "type": "process",
+      "label": "Hồ sơ vụ việc",
+      "explain": "",
+      "step": 8,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "file",
+      "badge": ""
+    },
+    {
+      "id": "e10",
+      "type": "end",
+      "label": "",
+      "explain": "",
+      "step": 9,
+      "color": "",
+      "x": null,
+      "y": null,
+      "notes": [],
+      "icon": "",
+      "badge": ""
+    }
+  ],
+  "edges": [
+    {
+      "source": "s1",
+      "target": "p2",
+      "label": ""
+    },
+    {
+      "source": "p2",
+      "target": "p3",
+      "label": ""
+    },
+    {
+      "source": "p3",
+      "target": "p4",
+      "label": ""
+    },
+    {
+      "source": "p4",
+      "target": "d5",
+      "label": ""
+    },
+    {
+      "source": "d5",
+      "target": "d6",
+      "label": "còn / đã đổi hướng"
+    },
+    {
+      "source": "d6",
+      "target": "p4",
+      "label": "chưa ↺"
+    },
+    {
+      "source": "d6",
+      "target": "p7",
+      "label": "đủ"
+    },
+    {
+      "source": "p7",
+      "target": "d8",
+      "label": ""
+    },
+    {
+      "source": "d8",
+      "target": "p9",
+      "label": "đạt"
+    },
+    {
+      "source": "p9",
+      "target": "e10",
+      "label": ""
+    }
+  ],
+  "steps": [
+    {
+      "n": 1,
+      "title": "Nhận cụm",
+      "body": "Agent nhận cụm đã qua sàng lọc AI, kèm bản tóm tắt số liệu.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 2,
+      "title": "Vô hại trước",
+      "body": "Chặn thói 'trùng là nghi': phải bác bỏ được giả thuyết vô hại mới được kết luận gian lận.",
+      "note": "",
+      "note_type": "info",
+      "badge": "NGUYÊN TẮC"
+    },
+    {
+      "n": 3,
+      "title": "Gọi tool",
+      "body": "Chỉ có tool ĐỌC. Agent không có quyền hành động thật (chặn, khoá).",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 4,
+      "title": "Đối chiếu",
+      "body": "Bằng chứng mới củng cố hay bác bỏ giả thuyết?",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 5,
+      "title": "Dừng hay đi tiếp",
+      "body": "Đủ bằng chứng → kết luận. Chưa → vòng tiếp. Quá 12 lượt → buộc dừng.",
+      "note": "Giới hạn bước giữ chi phí và thời gian chờ của giám khảo.",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 6,
+      "title": "Kết luận",
+      "body": "Ra 1 trong 4: đường dây, nạn nhân, vô hại, chưa đủ căn cứ.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 7,
+      "title": "Kiểm chứng nguồn",
+      "body": "Mỗi bằng chứng phải trỏ tới 1 lần gọi tool có thật.",
+      "note": "",
+      "note_type": "info",
+      "badge": "CHỐNG BỊA"
+    },
+    {
+      "n": 8,
+      "title": "Hồ sơ vụ việc",
+      "body": "Đội rủi ro đọc, quyết định cuối cùng vẫn là con người.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    }
+  ],
+  "arrows": [],
+  "groups": [
+    {
+      "id": "g_loop",
+      "label": "Vòng điều tra",
+      "explain": "Mỗi vòng: gọi 1 tool, đối chiếu giả thuyết, quyết định dừng hay đi tiếp. Tối đa 12 lượt.",
+      "color": "#4e9a5f",
+      "pad": 26,
+      "x": null,
+      "y": null,
+      "w": null,
+      "h": null,
+      "members": [
+        "p4",
+        "d5",
+        "d6"
+      ]
+    }
+  ]
+}

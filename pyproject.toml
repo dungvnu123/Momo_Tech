@@ -1,0 +1,10 @@
+[project]
+name = "thien-la"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "feature-flow[server]",
+]
+
+[tool.uv.sources]
+feature-flow = { git = "https://github.com/hoangvunghi/feature-flow", rev = "13133d5863c3f68adddacbd42158cddfe5a547c7" }
