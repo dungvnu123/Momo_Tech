@@ -1,5 +1,6 @@
 """Translate the web API contracts to the shared AI services and BaseAgent."""
 import json
+from pathlib import Path
 
 from app.agents.investigation import InvestigationAgent
 from app.ai.shield.indicators import canonical_indicator
@@ -37,9 +38,11 @@ class BackendAI:
         tools = BackendAgentTools(self.store, alert)
         if not tools.ids:
             yield {"type": "case", "case": {"verdict": "inconclusive", "confidence": 0,
-                   "members": [], "victims": [], "evidence": [], "actions": [], "mode": "gemini"}}
+                   "members": [], "victims": [], "evidence": [], "actions": [], "mode": "gemini",
+                   "status": "failed", "reason": "snapshot_empty", "missing_information": ["Không có hồ sơ hợp lệ tại thời điểm cảnh báo."]}}
             return
         agent = InvestigationAgent(self.client, tools_factory=lambda: tools)
+        agent.prompt_file = Path(__file__).with_name("investigation_prompt.md")
         context = AgentContext(metadata={"cluster_id": alert["cluster_id"]})
         async for event, data in agent._events(tools.ids[0], context):
             if event == "model_step":

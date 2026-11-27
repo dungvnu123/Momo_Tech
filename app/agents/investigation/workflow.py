@@ -47,6 +47,8 @@ def validate_submission(arguments: dict, steps: list[ToolStep]) -> CaseSubmissio
     sources = {step.tool_call_id for step in steps if step.result.get("ok") and step.name != "submit_case"}
     if any(evidence.source not in sources for evidence in case.evidence):
         raise ValueError("Evidence must reference a successful read in this run")
+    if any(evidence.source not in sources for item in case.transaction_assessments for evidence in item.evidence):
+        raise ValueError("Transaction evidence must reference a successful read in this run")
     if not (set(case.members) | set(case.victims)) <= known_applications(steps):
         raise ValueError("Case mentions an application not observed in tool data")
     protected = set()
@@ -101,7 +103,10 @@ def create_workflow(client, *, max_tool_calls: int, operation_timeout: float):
         call = state["calls"][0]
         if call.name == "submit_case":
             try:
-                case = validate_submission(call.arguments, steps)
+                candidate = validate_submission(call.arguments, steps)
+                if hasattr(state["tools"], "validate_case"):
+                    state["tools"].validate_case(candidate, steps)
+                case = candidate
                 result = {"ok": True, "tool": call.name, "data": {"accepted": True}}
             except ValidationError as error:
                 result = {"ok": False, "tool": call.name, "error": {"code": "invalid_case",

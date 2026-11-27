@@ -154,11 +154,12 @@ function setHours(a, z) {
 }
 function alertItem(a, fresh) {
   const v = VERD[a.verdict];
+  const confidenceText = a.verdict === "inconclusive" ? "vai trò chưa xác định" : a.case_conf == null ? `điểm sàng lọc ${Math.round(a.conf * 100)}/100` : `model tự đánh giá ${Math.round(a.conf * 100)}%`;
   return `<button class="item${fresh ? " fresh" : ""}" data-id="${a.alert_id}">
     <div class="row"><span class="t">${fmtTs(a.ts)}</span><span class="sev-b sev-${a.severity}">${SEV[a.severity]}</span></div>
     <div class="ttl">${esc(a.title)}</div>
-    <div class="bar" title="Độ tin cậy ${Math.round(a.conf * 100)}%"><i style="width:${Math.round(a.conf * 100)}%"></i></div>
-    <small>${a.cid || "giao dịch"} · ${a.size} hồ sơ${a.n_pending ? ` · <b>${a.n_pending} chờ giải ngân</b>` : ""}${a.n_reports ? ` · ${a.n_reports} tin báo` : ""} · tin cậy ${Math.round(a.conf * 100)}%</small>
+    ${a.verdict === "inconclusive" ? "" : `<div class="bar" title="${confidenceText}"><i style="width:${Math.round(a.conf * 100)}%"></i></div>`}
+    <small>${a.cid || "giao dịch"} · ${a.size} hồ sơ${a.n_pending ? ` · <b>${a.n_pending} chờ giải ngân</b>` : ""}${a.n_reports ? ` · ${a.n_reports} tin báo` : ""} · ${confidenceText}</small>
     <div>${v ? `<span class="tag ${v[1]}">${v[0]}</span>` : `<span class="tag">Chưa điều tra</span>`}${a.signals.slice(0, 3).map((k) => `<span class="tag">${SIG[k] || k}</span>`).join("")}</div></button>`;
 }
 async function loadAlerts(openFirst) {
@@ -235,12 +236,20 @@ function runInvestigate(id) {
 }
 const V = { fraud_ring: ["Đường dây gian lận", "v-scam"], victims: ["Nạn nhân bị lừa", "v-warn"], benign: ["Vô hại", "v-safe"], inconclusive: ["Chưa đủ căn cứ", "v-suspicious"] };
 function showCase(c, cached) {
-  const [t, cls] = V[c.verdict];
+  const incomplete = c.status && c.status !== "completed";
+  const [t, cls] = incomplete ? ["Phiên điều tra chưa hoàn thành", "v-suspicious"] : V[c.verdict];
   cy?.nodes().removeClass("hl"); c.victims.forEach((x) => cy?.$id(x).addClass("victim"));
   $("#case").className = "case";
-  $("#case").innerHTML = `<div class="verdict ${cls}">${t}<small>${c.ring_type ? esc(c.ring_type) + " · " : ""}tin cậy ${Math.round(c.confidence * 100)}%${c.mode === "mock" ? " · giả lập" : ""}${cached ? " · đã điều tra sẵn" : ""}</small></div>
+  const certainty = incomplete ? "Chưa có kết luận mới. Hãy thử lại hoặc kiểm tra kết nối AI." : c.verdict === "inconclusive" ? "Vai trò người vay chưa xác định; xem đánh giá giao dịch bên dưới." : `Mức tự đánh giá của model: ${Math.round(c.confidence * 100)}% · chưa hiệu chuẩn`;
+  const recommendation = { allow: "Không đề xuất cảnh báo thêm", warn: "Đề xuất cảnh báo khách", hold: "Đề xuất tạm giữ để xác minh", review: "Cần người kiểm tra" };
+  $("#case").innerHTML = `<div class="verdict ${cls}">${t}<small>${certainty}${c.mode === "mock" ? " · giả lập" : ""}${cached ? " · đã lưu" : ""}</small></div>
+    ${c.summary ? `<p>${esc(c.summary)}</p>` : ""}
+    ${(c.transaction_assessments || []).map((a) => `<div class="transaction-assessment"><h3>${esc(recommendation[a.recommendation] || a.recommendation)} · ${esc(a.transfer_id)}</h3><p>${esc(a.reason)}</p>${a.evidence?.length ? `<ul>${a.evidence.map((e) => `<li>${esc(e.claim)} <small>[${esc(e.source)}]</small></li>`).join("")}</ul>` : ""}<small>Đề xuất để người có thẩm quyền xem xét, chưa thực hiện giữ tiền.</small></div>`).join("")}
     ${c.members.length ? `<p><b>Kẻ gian:</b> ${c.members.map((x) => `<span class="tag hot">${x}</span>`).join("")}</p>` : ""}
     ${c.victims.length ? `<p><b>Nạn nhân cần bảo vệ:</b> ${c.victims.map((x) => `<span class="tag">${x}</span>`).join("")}</p>` : ""}
+    ${c.evidence?.length ? `<h3>Bằng chứng đã đọc</h3><ul class="reasons">${c.evidence.map((x) => `<li>${esc(typeof x === "string" ? x : x.claim)}</li>`).join("")}</ul>` : ""}
+    ${c.benign_explanation ? `<h3>Giải thích vô hại đã cân nhắc</h3><p>${esc(c.benign_explanation)}</p>` : ""}
+    ${c.missing_information?.length ? `<h3>Thông tin còn thiếu</h3><ul class="reasons">${c.missing_information.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}
     <h3>Việc cần làm</h3><ul class="reasons">${c.actions.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>`;
 }
 

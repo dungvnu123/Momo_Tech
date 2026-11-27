@@ -157,6 +157,7 @@ table.ttd { width: 100%; border-collapse: collapse; font-size: 14px; }
 table.ttd td, table.ttd th { padding: 8px 10px; border-bottom: 1px solid #f3e6ed; text-align: left; }
 table.ttd th { color: var(--muted); font-weight: 600; font-size: 13px; }
 .speed { font-weight: 700; } .speed.fast { color: var(--green); } .speed.slow { color: var(--amber); }
+.transaction-assessment { padding: 12px; margin: 12px 0; border-left: 4px solid var(--amber); background: #fff8ed; border-radius: 8px; }
 
 @media (max-width: 900px) {
   .two, .net, .split, .grid3 { grid-template-columns: 1fr; }

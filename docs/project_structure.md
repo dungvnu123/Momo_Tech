@@ -6,6 +6,8 @@ app/
 │   ├── http/         # shield, transfer, alerts, live, metrics và helper chung
 │   ├── integration.py # đổi hợp đồng web sang AIService và InvestigationAgent
 │   ├── agent_tools.py # tool giới hạn theo thời điểm cảnh báo, che định danh
+│   ├── evidence/     # transactions, reports, validation cho đề xuất xử lý
+│   ├── investigation_prompt.md # nhiệm vụ điều tra snapshot backend
 │   ├── store.py      # truy vấn dữ liệu nghiệp vụ của backend
 │   ├── mock_ai.py    # chỉ dùng dựng dữ liệu/kết quả mẫu offline
 │   └── routes.py     # đăng ký API, static web và Feature Flow

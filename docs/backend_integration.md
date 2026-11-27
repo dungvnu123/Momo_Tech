@@ -52,3 +52,40 @@ của một lượt đánh giá toàn bộ bằng LLM.
 Kiểm tra bằng `uv run python -m unittest discover -s tests -q`. Bộ test tích hợp
 tiêm model giả có cấu trúc để kiểm tra hợp đồng HTTP/SSE, lưu case, bảo vệ bằng
 key, che dữ liệu và không đọc dữ liệu tương lai; không gửi dữ liệu ra ngoài.
+
+## Đánh giá giao dịch và vai trò người vay
+
+Không có giá trị 50% cố định trong Agent thật: `confidence` do model tự trả,
+chưa được hiệu chuẩn thành xác suất. Trước đây tool bỏ cờ SIMO ở chi tiết
+giao dịch và không nối tin báo với token nơi nhận; giao diện chỉ hiện kết
+luận vai trò cùng phần trăm nên kết quả thiếu hướng xử lý.
+
+Hiện `get_cluster` trả đúng loại cảnh báo và `triggering_transfer_id`;
+`get_transfer` trả cờ SIMO, số tiền, ngữ cảnh người nhận, thời gian từ giải
+ngân và các tin báo khớp tới `as_of`. `money_flow` giữ những trường này,
+trả aggregate toàn bộ cùng chi tiết phân trang. Tin báo được nối với token
+người nhận; ngân hàng là một phần định danh người nhận khi truy ngược.
+Khớp số tài khoản trong tin báo không có ngân hàng vẫn được ghi là chưa
+xác minh, không âm thầm gộp các ngân hàng thành một tài khoản.
+
+Kết quả có `transaction_assessments` cho từng giao dịch được đánh giá:
+`transfer_id`, `recommendation` (allow/warn/hold/review), lý do và dẫn nguồn.
+Với cảnh báo giao dịch, Agent phải đọc và đánh giá đúng giao dịch gây cảnh
+báo trước khi nộp kết luận. Backend kiểm tra dẫn nguồn chứa đúng giao dịch;
+hold cần SIMO hoặc cảnh báo nơi nhận có phạm vi đã xác minh. Tin báo giả lập
+hoặc chỉ khớp số ngân hàng chưa đủ cho hold. Những kiểm tra này không gán
+verdict, confidence hoặc tự thực hiện hành động tài chính.
+
+Vai trò người vay vẫn có thể `inconclusive` khi thiếu dữ liệu. Khi đó Agent
+phải nêu `missing_information` cụ thể; giao diện hiển thị lý do, bằng chứng,
+giả thuyết vô hại và việc cần làm, thay vì trình bày 50% như xác suất gian lận.
+Một giao dịch được ghi SIMO có thể cần đề xuất hold/xác minh trong khi vai trò
+người chuyển chưa xác định. Lỗi provider/timeout được hiển thị là phiên chưa
+hoàn thành, không giả thành nhận định thiếu dữ liệu.
+
+`backend/evidence/` chia việc dựng dữ liệu giao dịch, nối tin báo và kiểm tra
+đề xuất xử lý. Prompt cho snapshot backend nằm ở `backend/investigation_prompt.md`.
+Schema kết quả dùng chung ở `agents/investigation/schemas.py`; vòng lặp vẫn
+thuộc InvestigationAgent kế thừa BaseAgent. Khi gửi schema cho Gemini, bỏ
+giới hạn độ dài mảng trong schema provider để tránh vượt giới hạn bộ giải mã;
+Pydantic tiếp tục kiểm tra toàn bộ giới hạn và dẫn nguồn ở phía ứng dụng.
