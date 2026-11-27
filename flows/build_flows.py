@@ -12,6 +12,11 @@ from pathlib import Path
 from feature_flow import Flow
 from feature_flow.model import Group
 
+if __package__:
+    from .backend_agent import backend_agent_pipeline
+else:
+    from backend_agent import backend_agent_pipeline
+
 OUT = Path(__file__).resolve().parent.parent / "docs" / "flows"
 GROUP = "Thiên La"
 
@@ -302,5 +307,5 @@ def hang_doi():
 
 
 if __name__ == "__main__":
-    for build in (kien_truc, ca_an_giang, agent_loop, vong_doi, realtime, hang_doi):
+    for build in (kien_truc, ca_an_giang, agent_loop, vong_doi, realtime, hang_doi, backend_agent_pipeline):
         print("saved:", build().save(OUT))
