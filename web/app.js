@@ -101,7 +101,7 @@ const SIG = { ref_hub: "tham chiếu chung", ip_block: "dải IP VPN", sim_block
               fast_out_stranger: "rút tiền cho người lạ", shared_recipient: "nơi nhận chung", device_hub: "thiết bị chung", simo: "SIMO" };
 const SEV = { khan: "Khẩn", cao: "Cao", tb: "Trung bình" };
 const VERD = { fraud_ring: ["Đường dây", "hot"], victims: ["Nạn nhân", ""], benign: ["Vô hại", ""] };
-const F = { day: "", sev: new Set(), kind: "", verdict: "", min_conf: 0, latest: true, q: "", sort: "priority" };
+const F = { day: "", sev: new Set(), kind: "", verdict: "", min_conf: 0, latest: true, q: "", sort: "priority", h0: 0, h1: 24 };
 const fmtTs = (ts) => `${ts.slice(11, 16)} · ${ts.slice(8, 10)}/${ts.slice(5, 7)}`;
 let cy, current, liveES;
 
@@ -111,6 +111,13 @@ async function net() {
   $("#days").innerHTML = days.map((d) => `<button data-day="${d.day}" title="${d.day}: ${d.n} cảnh báo (${d.khan} khẩn)">
       ${["tb", "cao", "khan"].map((k) => `<i class="${k}" style="height:${(d[k] / max) * 100}%"></i>`).join("")}</button>`).join("");
   $("#days").onclick = (e) => { const b = e.target.closest("button"); if (b) setDay(b.dataset.day); };
+  // nhãn ngày dưới biểu đồ: đầu mỗi tháng + mỗi 7 ngày
+  $("#days-axis").innerHTML = days.map((d, i) => (i === 0 || d.day.endsWith("-01") || i % 7 === 0)
+    ? `<span style="left:${((i + 0.5) / days.length) * 100}%">${d.day.slice(8, 10)}/${d.day.slice(5, 7)}</span>` : "").join("");
+  $("#hours-axis").innerHTML = Array.from({ length: 24 }, (_, h) => `<span>${h % 3 === 0 ? h + "h" : ""}</span>`).join("");
+  $("#hours").onclick = (e) => { const b = e.target.closest("button"); if (b) setHours(+b.dataset.h, +b.dataset.h + 1); };
+  document.querySelectorAll(".hchips .chip").forEach((b) => (b.onclick = () => { const [a, z] = b.dataset.h.split("-").map(Number); setHours(a, z); }));
+  loadHours();
   $("#day-all").onclick = () => setDay("");
   document.querySelectorAll(".chip.sev").forEach((b) => (b.onclick = () => { b.classList.toggle("on"); F.sev.has(b.dataset.sev) ? F.sev.delete(b.dataset.sev) : F.sev.add(b.dataset.sev); loadAlerts(); }));
   $("#f-kind").onchange = (e) => { F.kind = e.target.value; loadAlerts(); };
@@ -130,7 +137,20 @@ function setDay(day) {
   document.querySelectorAll("#days button").forEach((b) => b.classList.toggle("on", b.dataset.day === day));
   $("#day-all").classList.toggle("sel", !day);
   $("#day-chip").hidden = !day; $("#day-chip").textContent = day ? `Ngày ${day.slice(8, 10)}/${day.slice(5, 7)}/${day.slice(0, 4)}` : "";
-  loadAlerts();
+  loadHours(); loadAlerts();
+}
+async function loadHours() {
+  const hs = await api("alerts/hours" + (F.day ? `?day=${F.day}` : "")), max = Math.max(...hs.map((h) => h.n), 1);
+  const night = hs.slice(0, 6).reduce((s, h) => s + h.n, 0), all = hs.reduce((s, h) => s + h.n, 0);
+  $("#hours-sub").textContent = `${F.day ? "ngày " + F.day.slice(8, 10) + "/" + F.day.slice(5, 7) : "mọi ngày"} · ${all} cảnh báo, ${night} lúc 0–6h`;
+  $("#hours").innerHTML = hs.map((h) => `<button data-h="${h.h}" title="${h.h}h–${h.h + 1}h: ${h.n} cảnh báo (${h.khan} khẩn)"
+      class="${h.h >= F.h0 && h.h < F.h1 && (F.h1 - F.h0 < 24) ? "on" : ""}${F.h1 - F.h0 < 24 && (h.h < F.h0 || h.h >= F.h1) ? " dim" : ""}">
+      ${["tb", "cao", "khan"].map((k) => `<i class="${k}" style="height:${(h[k] / max) * 100}%"></i>`).join("")}</button>`).join("");
+}
+function setHours(a, z) {
+  [F.h0, F.h1] = F.h0 === a && F.h1 === z && z - a === 1 ? [0, 24] : [a, z];   // bấm lại cùng 1 giờ = bỏ lọc
+  document.querySelectorAll(".hchips .chip").forEach((b) => b.classList.toggle("sel", b.dataset.h === `${F.h0}-${F.h1}`));
+  loadHours(); loadAlerts();
 }
 function alertItem(a, fresh) {
   const v = VERD[a.verdict];
@@ -149,6 +169,7 @@ async function loadAlerts(openFirst) {
   if (F.verdict) p.set("verdict", F.verdict);
   if (F.min_conf) p.set("min_conf", F.min_conf);
   if (F.q) p.set("q", F.q);
+  if (F.h1 - F.h0 < 24) { p.set("hour_from", F.h0); p.set("hour_to", F.h1); }
   const r = await api("alerts?" + p);
   $("#list-sub").textContent = `${num(r.total)} cảnh báo${r.total > r.items.length ? ` · hiện ${r.items.length} đầu` : ""}`;
   $("#alert-list").innerHTML = r.items.map((a) => alertItem(a)).join("") || `<p class="muted">Không có cảnh báo khớp bộ lọc.</p>`;
@@ -162,12 +183,15 @@ async function openAlert(id, btn) {
   const d = await api("alerts/" + id), a = d.alert;
   $("#cl-title").textContent = a.title;
   $("#cl-sub").textContent = `${fmtTs(a.ts)} · ${a.cid || "giao dịch " + a.transfer_id} · ${SEV[a.severity]} · ${d.money_flow} · ${a.reason}`;
-  $("#history").innerHTML = d.history.length > 1 ? "Diễn biến cụm: " + d.history.map((h) => `<span class="${h.alert_id === id ? "cur" : ""}" title="${esc(h.title)}">${fmtTs(h.ts)}</span>`).join("") : "";
+  const H = d.history, chip = (h) => `<span class="${h.alert_id === id ? "cur" : ""}" title="${esc(h.title)}">${fmtTs(h.ts)}</span>`;
+  const shown = H.length > 8 ? [H[0], null, ...H.slice(-6)] : H;   // gọn: mốc đầu + 6 mốc cuối
+  $("#history").innerHTML = H.length > 1 ? `Diễn biến cụm (${H.length} lần): ` + shown.map((h) => h ? chip(h) : `<span>… ${H.length - 7} lần nữa</span>`).join("") : "";
   $("#investigate").disabled = false;
   $("#log").innerHTML = "";
   if (d.case) showCase(d.case, true); else { $("#case").className = "case empty"; $("#case").textContent = "Bấm “Điều tra” để agent xem xét — chỉ dùng dữ liệu tới thời điểm cảnh báo."; }
   cy?.destroy();
   cy = cytoscape({ container: $("#graph"), elements: d.graph, layout: { name: "cose", animate: false, padding: 24 },
+    minZoom: 0.3, maxZoom: 3, wheelSensitivity: 0.2,   // không cho zoom ra tới mức đồ thị "biến mất"
     style: [
       { selector: "node", style: { "background-color": (n) => COLOR[n.data("kind")] || "#999", label: "data(label)", "font-size": 9,
           "text-wrap": "wrap", color: "#2b1a24", "text-valign": "bottom", "text-margin-y": 4, width: 16, height: 16, "font-family": "Be Vietnam Pro" } },
@@ -180,7 +204,12 @@ async function openAlert(id, btn) {
   if (d.case) d.case.victims.forEach((x) => cy.$id(x).addClass("victim"));
   $("#dossier").hidden = true;
   cy.on("tap", "node[kind='app']", (e) => openDossier(e.target.id(), a.ts));
+  cy.on("dbltap", (e) => { if (e.target === cy) fitGraph(); });
 }
+function fitGraph() { if (cy) { cy.resize(); cy.fit(undefined, 24); } }
+// khung đổi kích thước (thu nhỏ cửa sổ, zoom trình duyệt, đổi bố cục) → vẽ lại + căn giữa
+new ResizeObserver(() => fitGraph()).observe($("#graph"));
+$("#fit").onclick = fitGraph;
 async function openDossier(appId, asOf) {
   const r = await api(`apps/${appId}?as_of=${encodeURIComponent(asOf)}`), p = r.profile, box = $("#dossier");
   box.hidden = false;

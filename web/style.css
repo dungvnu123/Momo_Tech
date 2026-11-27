@@ -124,6 +124,19 @@ select, input[type=search] { font: inherit; font-size: 13px; border: 1.5px solid
 .days button { flex: 1; min-width: 3px; border: 0; padding: 0; cursor: pointer; background: none; display: flex; flex-direction: column-reverse; height: 100%; }
 .days button i { display: block; width: 100%; } .days button i.tb { background: #e8cddc; } .days button i.cao { background: var(--pink-2); } .days button i.khan { background: var(--red); }
 .days button:hover, .days button.on { outline: 2px solid var(--pink); outline-offset: 1px; border-radius: 2px; }
+.axis { position: relative; height: 16px; font-size: 11px; color: var(--muted); margin: -6px 0 8px; }
+.axis span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.hours-wrap { border-top: 1px dashed var(--pink-line); padding-top: 10px; margin-bottom: 10px; }
+.hours-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 14px; }
+.hours-head .muted { margin: 0; font-size: 13px; }
+.hchips { display: flex; gap: 6px; margin-left: auto; flex-wrap: wrap; }
+.hchips .chip { padding: 3px 10px; font-size: 12px; }
+.hours { display: grid; grid-template-columns: repeat(24, 1fr); gap: 3px; align-items: end; height: 46px; margin: 8px 0 8px; }
+.hours button { border: 0; padding: 0; cursor: pointer; background: #f7eef3; border-radius: 4px 4px 0 0; height: 100%; display: flex; flex-direction: column-reverse; overflow: hidden; }
+.hours button i { display: block; width: 100%; } .hours button i.tb { background: #e8cddc; } .hours button i.cao { background: var(--pink-2); } .hours button i.khan { background: var(--red); }
+.hours button.on { outline: 2px solid var(--pink); outline-offset: 1px; } .hours button.dim { opacity: .3; }
+.hours-axis { display: grid; grid-template-columns: repeat(24, 1fr); gap: 3px; margin: -4px 0 0; height: auto; }
+.hours-axis span { position: static; transform: none; text-align: center; }
 .filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .filters .sep { width: 1px; height: 22px; background: var(--pink-line); margin: 0 4px; }
 .chip.sel, .chip.on { background: var(--pink); color: #fff; border-color: var(--pink); }

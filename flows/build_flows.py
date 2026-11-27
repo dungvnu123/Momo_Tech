@@ -41,9 +41,9 @@ def kien_truc():
                                "(kể cả số viết lách '19o3 4567'), nhận ra tin người bị hại tự kể.")
     data = f.process("Dữ liệu bên cho vay", step=3, icon="database", badge="200.000 hồ sơ",
                      explain="Hồ sơ vay + tín hiệu kỹ thuật (IP, SIM, thiết bị, giả lập, thời gian điền đơn) "
-                             "+ phiên eKYC lúc vay + 76.953 lượt chuyển tiền sau giải ngân (kèm ngữ cảnh người nhận: danh bạ, lịch sử, SIMO).")
-    graph = f.process("② Lưới", step=4, icon="chart", badge="4.405 cụm",
-                      explain="Đồ thị chỉ giữ điểm được dùng chung: 7.258 điểm nối 13.026 hồ sơ thành 4.405 cụm (đã đo). "
+                             "+ phiên eKYC lúc vay + 77.783 lượt chuyển tiền sau giải ngân (kèm ngữ cảnh người nhận: danh bạ, lịch sử, SIMO).")
+    graph = f.process("② Lưới", step=4, icon="chart", badge="4.487 cụm",
+                      explain="Đồ thị chỉ giữ điểm được dùng chung: các hồ sơ có điểm chung gom thành 4.487 cụm (đã đo). "
                               "AI hợp nhất thực thể: 'Ng V. A, 12/5 P. Láng Hạ' = 'Nguyễn Văn A, số 12 ngõ 5 Láng Hạ'.")
     triage = f.process("③ Sàng lọc AI", step=5, icon="gear", badge="~150 lô",
                        explain="AI đọc bản tóm tắt số liệu từng cụm (không PII) theo lô 30 cụm, gạt gia đình/ký túc xá, "
@@ -71,7 +71,7 @@ def kien_truc():
     f.narrate(3, "Dữ liệu bên cho vay", "Mỗi người 1 ví chính chủ, tiền vay luôn về ví đó — nên dấu vết nằm ở tín hiệu kỹ thuật và dòng tiền SAU giải ngân.")
     f.narrate(4, "Nếu chỉ dùng luật", "Gộp 5 luật phổ biến: bắt 54/58 gian lận nhưng gắn cờ 61.401 hồ sơ, và coi 23/28 nạn nhân là kẻ gian (đã đo).",
               note="Đội rủi ro ngập trong cảnh báo sai.", note_type="warn", badge="VẤN ĐỀ")
-    f.narrate(5, "AI sàng lọc", "Từ 4.405 cụm, AI giữ lại vài chục cụm đáng điều tra.", badge="AI")
+    f.narrate(5, "AI sàng lọc", "Từ 4.487 cụm, AI giữ lại vài chục cụm đáng điều tra.", badge="AI")
     f.narrate(6, "Agent điều tra", "Tách kẻ gian khỏi gia đình, ký túc xá — và khỏi nạn nhân.", badge="AI")
     f.narrate(7, "Hồ sơ vụ việc", "Mục tiêu: dưới 100 hồ sơ phải xem tay, không nhầm nạn nhân nào.",
               note="Đây là MỤC TIÊU, sẽ đo bằng eval.py trên cả seed khác.", badge="MỤC TIÊU")
@@ -176,6 +176,131 @@ def agent_loop():
     return f
 
 
+# ── 4. Vòng đời 1 hồ sơ: dữ liệu nhiều bảng, mọi thứ có mốc thời gian ──────────────────
+def vong_doi():
+    f = Flow("thienla-vong-doi-ho-so", "Vòng đời 1 hồ sơ vay — mỗi bước là 1 bảng có mốc thời gian")
+    f.group = GROUP
+    f.meta(subtitle="Nộp → eKYC → duyệt → giải ngân → chuyển tiền → đến hạn → trả hoặc quá hạn. Quá hạn tính TẠI từng thời điểm.",
+           duration="dữ liệu", level="Nền tảng",
+           learn=["Không có cột 'quá hạn' chốt sẵn — tính từ lịch trả + các lần trả",
+                  "Mỗi bước để lại dấu vết riêng: eKYC, dòng tiền, tin báo",
+                  "Bộ máy chỉ được thấy bước đã xảy ra tới thời điểm đang xét"])
+    s = f.start()
+    sub = f.process("Nộp hồ sơ", step=1, icon="user", badge="applications",
+                    explain="applied_at + thông tin khai báo + tín hiệu kỹ thuật lúc nộp: thiết bị, IP (di động/nhà/VPN/datacenter), tuổi SIM, giả lập, thời gian điền đơn.")
+    ekyc = f.process("eKYC khuôn mặt", step=2, icon="lock", badge="ekyc_sessions",
+                     explain="Mỗi lần thử là 1 dòng: thời điểm, thiết bị, liveness, máy bị hook/root, đạt/trượt. Liveness sát ngưỡng + thử nhiều lần + máy mới gắn ví = dấu hiệu vượt eKYC.")
+    ok = f.decision("Duyệt?", step=3, explain="decided_at + decision (APPROVED/REJECTED). Hồ sơ chưa có quyết định = đang chờ.")
+    rej = f.process("Từ chối", step=4, explain="Dừng ở đây.")
+    disb = f.process("Giải ngân về ví chính chủ", step=4, icon="check", badge="disbursed_at",
+                     explain="Tiền luôn về tài khoản/ví đứng tên khách (đối chiếu hợp đồng mẫu). Kỳ hạn 3 tháng, lãi 36%/năm.")
+    xfer = f.process("Chuyển tiền đi", step=5, icon="api", badge="wallet_transfers",
+                     explain="Mỗi lần chuyển: thời điểm, người nhận, số tiền, ghi chú + ngữ cảnh người nhận (danh bạ & lúc lưu số, đã từng chuyển chưa, SIMO, ví nhận bao nhiêu ngày tuổi).")
+    due = f.process("Đến hạn kỳ 1, 2, 3", step=6, icon="clock", badge="repayment_schedule",
+                    explain="Mỗi kỳ 1 dòng: ngày đến hạn, gốc, lãi.")
+    paid = f.decision("Đã trả?", step=7, explain="repayments: mỗi lần trả 1 dòng (thời điểm, số tiền, kênh).")
+    good = f.process("Trả đúng / trễ ít", step=8, icon="check")
+    fpd = f.process("Quá hạn ngay kỳ đầu", step=8, icon="alert", badge="hậu kiểm",
+                    explain="Đến hạn kỳ 1 + 10 ngày chưa trả → tín hiệu 'fpd'. Đứng riêng = rủi ro tín dụng; nằm trong cụm có quan hệ thì làm cụm nặng thêm.")
+    rep = f.process("Tin báo lừa đảo", step=5, icon="mail", badge="scam_reports",
+                    explain="Bất kỳ lúc nào: khách gửi tin nghi lừa hoặc kể bị lừa. Chỉ có chữ thô — AI trích tài khoản/ví/hotline.")
+    e = f.end()
+    set_step(f, e, 9)
+    for nid, c in ((ekyc, "#cdb8ec"), (xfer, "#f4b47e"), (fpd, "#f4b47e"), (rep, "#f4b47e")):
+        color(f, nid, c)
+    f.link(s, sub); f.link(sub, ekyc); f.link(ekyc, ok); f.link(ok, rej, "không"); f.link(ok, disb, "có")
+    f.link(disb, xfer); f.link(disb, due); f.link(due, paid); f.link(paid, good, "có"); f.link(paid, fpd, "không")
+    f.link(s, rep); f.link(good, e); f.link(fpd, e); f.link(rej, e); f.link(xfer, e); f.link(rep, e)
+    f.narrate(1, "Nộp hồ sơ", "Bảng applications: 200.000 hồ sơ từ 01/06 tới 25/11/2026.")
+    f.narrate(2, "eKYC", "Bảng ekyc_sessions: mỗi lần thử 1 dòng.", note="Nhận ra khuôn mặt giả là việc của nhà cung cấp eKYC; Thiên La bắt BỐI CẢNH quanh phiên eKYC.")
+    f.narrate(3, "Quyết định", "Có mốc decided_at → đếm được 'hồ sơ đang chờ' tại đúng thời điểm, không dùng trạng thái cuối.")
+    f.narrate(4, "Giải ngân", "Mục đích 'hoàn ứng vốn tự có' → tiền là của khách, không kiểm soát được sau giải ngân.")
+    f.narrate(5, "Dòng tiền + tin báo", "Hai nguồn dấu vết chính: tiền đi đâu, và ai báo gì.")
+    f.narrate(6, "Lịch trả", "3 kỳ, mỗi kỳ 1 dòng.")
+    f.narrate(7, "Trả hay không", "Quá hạn = ngày đang xét − ngày đến hạn của kỳ đầu tiên chưa trả.")
+    f.narrate(8, "Hậu kiểm", "Quá hạn ngay kỳ đầu là dấu vết DUY NHẤT của kẻ gian lẻ loi — bắt sau, không bắt trước được.", badge="TRUNG THỰC")
+    return f
+
+
+# ── 5. Bộ máy realtime: mỗi sự kiện → cập nhật đồ thị → có thể sinh cảnh báo ───────────────
+def realtime():
+    f = Flow("thienla-realtime", "Bộ máy realtime: từ 1 sự kiện tới 1 cảnh báo")
+    f.group, f.look = GROUP, "iso"
+    f.meta(subtitle="app/engine.py — 741.593 sự kiện xử lý theo đúng thứ tự thời gian trong ~8 giây, sinh 345 cảnh báo.",
+           duration="kỹ thuật", level="Chi tiết",
+           learn=["Chỉ cập nhật cụm bị chạm tới — không tính lại từ đầu",
+                  "Không nhìn trước tương lai: mọi quyết định chỉ dùng dữ liệu đã xảy ra",
+                  "AI chỉ được gọi khi cụm vượt ngưỡng — giữ chi phí và tốc độ"])
+    s = f.start()
+    ev = f.process("Sự kiện tới", step=1, icon="queue", badge="5 loại",
+                   explain="Nộp hồ sơ · chuyển tiền · tin báo · trả nợ · kiểm tra quá hạn kỳ 1 (lịch hẹn giờ của chính hệ thống). Bản thi: phát lại theo thời gian; chạy thật: đọc hàng đợi sự kiện.")
+    kind = f.decision("Là chuyển tiền?", step=2)
+    chk = f.process("Cảnh báo lúc chuyển tiền", step=3, icon="lock", badge="< 1 giây",
+                    explain="Ngữ cảnh khoản vay vừa giải ngân + người nhận (danh bạ, lịch sử, SIMO, số tin báo ĐÃ có tới giờ) → cho phép / cảnh báo / tạm giữ.")
+    hold = f.decision("Tạm giữ?", step=4)
+    al1 = f.process("Cảnh báo giao dịch", step=5, icon="alert", badge="60 lần", explain="Vào hàng đợi với mức Khẩn.")
+    upd = f.process("Cập nhật đồ thị", step=3, icon="chart", badge="union-find",
+                    explain="Nối hồ sơ qua điểm dùng chung: thiết bị, SĐT tham chiếu, dải IP VPN, lô SIM mới, nơi nhận tiền (đã siết: ≤2h, ≥30% khoản vay, chưa từng chuyển), máy mở ví nhận, tài khoản/hotline trong tin báo. Dữ liệu chỉ thêm, không xoá → nối thêm rất rẻ.")
+    ev2 = f.process("Đánh giá cụm vừa đổi", step=4, icon="gear",
+                    explain="Đếm tín hiệu của cụm: tham chiếu chung ≥5, thiết bị chung ≥5, nơi nhận chung, cùng quá hạn kỳ đầu, IP/SIM/giả lập, eKYC bất thường, SIMO, tin báo; số hồ sơ đang chờ TẠI thời điểm này.")
+    tri = f.decision("AI sàng lọc: đáng điều tra?", step=5,
+                     explain="ai.triage_clusters — nhận bản tóm tắt số liệu (không PII), trả quyết định + độ tin cậy + lý do.")
+    chg = f.decision("Có bằng chứng mới?", step=6, explain="So với lần cảnh báo trước của cùng cụm: thêm tín hiệu, thêm tin báo, lớn thêm, đổi số hồ sơ chờ. Không đổi → im lặng, tránh spam.")
+    al2 = f.process("Cảnh báo cụm", step=7, icon="alert", badge="mức + ưu tiên",
+                    explain="Mức Khẩn/Cao/Trung bình; ưu tiên = mức × 10 + tin cậy × 10 + quy mô + 2 × hồ sơ đang chờ. Giữ mã cụm cũ khi 2 cụm nhập lại → diễn biến liền mạch.")
+    q = f.process("Hàng đợi điều tra", step=8, icon="laptop")
+    e = f.end()
+    set_step(f, e, 9)
+    for nid, c in ((chk, "#f4b47e"), (tri, "#cdb8ec"), (al1, "#f4b47e"), (al2, "#f4b47e")):
+        color(f, nid, c)
+    f.link(s, ev); f.link(ev, kind); f.link(kind, chk, "có"); f.link(chk, hold); f.link(hold, al1, "có"); f.link(hold, upd, "không")
+    f.link(kind, upd, "không"); f.link(upd, ev2); f.link(ev2, tri); f.link(tri, chg, "có"); f.link(tri, e, "không")
+    f.link(chg, al2, "có"); f.link(chg, e, "không"); f.link(al1, q); f.link(al2, q); f.link(q, e)
+    f.narrate(1, "Sự kiện", "Mọi thứ thành 1 dòng sự kiện có thời gian.", note="Bản thi phát lại dữ liệu theo đồng hồ tua nhanh; code xử lý giống hệt khi chạy thật.")
+    f.narrate(2, "Phân luồng", "Chuyển tiền đi cả 2 đường: kiểm tra ngay + cập nhật đồ thị.")
+    f.narrate(3, "Chặn tại chỗ / nối đồ thị", "Kiểm tra chuyển tiền chỉ dùng tin báo đã có TỚI GIỜ — nạn nhân đầu tiên chưa có ai báo.")
+    f.narrate(4, "Đánh giá", "Chỉ tính lại cụm vừa bị chạm.")
+    f.narrate(5, "AI sàng lọc", "Gọi AI theo nhu cầu, không theo từng sự kiện.", badge="AI")
+    f.narrate(6, "Chống spam", "Cụm không có gì mới thì không báo lại.")
+    f.narrate(7, "Cảnh báo", "Đo được (seed chuẩn): A 18 phút, E/H ~45 phút, D 1 ngày, G 1 ngày, B 1 ngày, F 4 ngày, C 27 ngày.")
+    f.narrate(8, "Hàng đợi", "Lọc theo ngày, khung giờ, mức độ, kết luận, độ tin cậy.")
+    return f
+
+
+# ── 6. Đội rủi ro dùng hàng đợi ────────────────────────────────────────────────────────
+def hang_doi():
+    f = Flow("thienla-hang-doi", "Đội rủi ro dùng hàng đợi điều tra")
+    f.group = GROUP
+    f.meta(subtitle="Từ 345 cảnh báo tới quyết định: lọc → chọn → xem đồ thị → xem dòng thời gian hồ sơ → điều tra → hành động.",
+           duration="2 phút", level="Hướng dẫn",
+           learn=["Bắt đầu từ mức Khẩn + có hồ sơ đang chờ giải ngân",
+                  "Dòng thời gian hồ sơ cho thấy đúng thứ tự sự việc",
+                  "Quyết định cuối luôn là của con người"])
+    s = f.start()
+    flt = f.process("Lọc", step=1, icon="gear", explain="Biểu đồ theo ngày + khung giờ (đêm 0–6h đáng xem), mức Khẩn/Cao/Trung bình, loại (cụm / giao dịch giữ), kết luận, độ tin cậy ≥, tìm mã. Sắp xếp: ưu tiên, mới nhất, tin cậy, quy mô.")
+    pick = f.process("Chọn cảnh báo", step=2, icon="alert", explain="Mỗi dòng: giờ, mức, tiêu đề, thanh độ tin cậy, số hồ sơ đang chờ, số tin báo, kết luận đã điều tra sẵn.")
+    g = f.process("Đồ thị cụm", step=3, icon="chart", explain="Hồ sơ + điểm dùng chung (thiết bị, tham chiếu, nơi nhận tiền, dải IP/lô SIM). Viền vàng = đang chờ giải ngân. Diễn biến cụm theo thời gian ở trên.")
+    tl = f.process("Dòng thời gian hồ sơ", step=4, icon="file", explain="Bấm 1 hồ sơ: nộp → eKYC từng lần → duyệt → giải ngân → từng lần chuyển (cờ SIMO, ngoài danh bạ) → đến hạn/trả → tin báo → cảnh báo, kèm 'quá hạn N ngày' TẠI lúc cảnh báo.")
+    inv = f.process("Điều tra", step=5, icon="api", explain="Agent chạy từng bước, chỉ thấy dữ liệu tới lúc cảnh báo; ra kết luận: đường dây / nạn nhân / vô hại / chưa đủ căn cứ.")
+    dec = f.decision("Con người quyết định", step=6)
+    a1 = f.process("Chặn + phong toả", step=7, icon="lock", explain="Dừng giải ngân hồ sơ đang chờ, đề nghị phong toả tài khoản gom, theo dõi thiết bị/SĐT.")
+    a2 = f.process("Hỗ trợ nạn nhân", step=7, icon="user", explain="Liên hệ, tư vấn trình báo, KHÔNG đưa vào danh sách đen.")
+    a3 = f.process("Đóng, ghi nhãn", step=7, icon="check", explain="Vô hại → ghi nhãn để đo lại độ chính xác hằng tuần.")
+    e = f.end()
+    set_step(f, e, 8)
+    f.link(s, flt); f.link(flt, pick); f.link(pick, g); f.link(g, tl); f.link(tl, inv); f.link(inv, dec)
+    f.link(dec, a1, "đường dây"); f.link(dec, a2, "nạn nhân"); f.link(dec, a3, "vô hại"); f.link(a1, e); f.link(a2, e); f.link(a3, e)
+    f.narrate(1, "Lọc", "Mặc định: mỗi cụm 1 dòng, sắp theo ưu tiên.")
+    f.narrate(2, "Chọn", "Ưu tiên cảnh báo Khẩn có hồ sơ đang chờ — còn chặn kịp tiền.")
+    f.narrate(3, "Đồ thị", "Bấm đúp nền hoặc ⤢ Vừa khung để căn lại.")
+    f.narrate(4, "Dòng thời gian", "Xem đúng thứ tự: vay xong mấy phút thì tiền đi đâu.")
+    f.narrate(5, "Điều tra", "Hiện là bản giả lập bằng luật; người làm AI thay trong app/ai.py.",
+              note="Mốc bản giả lập: 57/58 kẻ gian, 0 nạn nhân bị nhầm, nhưng nhầm 298 hồ sơ vô hại — AI phải cắt phần này.", note_type="warn")
+    f.narrate(6, "Quyết định", "Agent chỉ đề xuất, không có quyền hành động thật.", badge="NGUYÊN TẮC")
+    f.narrate(7, "Hành động + nhãn", "Mỗi quyết định thành nhãn để đo lại precision/recall.")
+    return f
+
+
 if __name__ == "__main__":
-    for build in (kien_truc, ca_an_giang, agent_loop):
+    for build in (kien_truc, ca_an_giang, agent_loop, vong_doi, realtime, hang_doi):
         print("saved:", build().save(OUT))

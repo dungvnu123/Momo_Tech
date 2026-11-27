@@ -83,6 +83,14 @@
         </div>
       </div>
       <div id="days" class="days" title="Số cảnh báo mỗi ngày — bấm để lọc"></div>
+      <div id="days-axis" class="axis"></div>
+      <div class="hours-wrap">
+        <div class="hours-head"><b>Khung giờ</b><span id="hours-sub" class="muted"></span>
+          <span class="hchips"><button class="chip sel" data-h="0-24">Mọi giờ</button><button class="chip" data-h="0-6">Đêm 0–6h</button>
+          <button class="chip" data-h="6-12">Sáng 6–12h</button><button class="chip" data-h="12-18">Chiều 12–18h</button><button class="chip" data-h="18-24">Tối 18–24h</button></span></div>
+        <div id="hours" class="hours"></div>
+        <div id="hours-axis" class="axis hours-axis"></div>
+      </div>
       <div class="filters">
         <button class="chip sel" id="day-all">Mọi ngày</button>
         <span class="chip-day" id="day-chip" hidden></span>
@@ -113,6 +121,7 @@
           <span><i class="dot app"></i>Hồ sơ vay</span><span><i class="dot dev"></i>Thiết bị</span><span><i class="dot ref"></i>SĐT tham chiếu</span>
           <span><i class="dot rcv"></i>Nơi nhận tiền</span><span><i class="dot ip"></i>Dải IP / lô SIM</span>
           <span class="muted">· Bấm vào 1 hồ sơ để xem dòng thời gian</span>
+          <button id="fit" class="chip" style="margin-left:auto" title="Đưa đồ thị về vừa khung (hoặc bấm đúp vào nền)">⤢ Vừa khung</button>
         </div>
         <div id="dossier" class="dossier" hidden></div>
         <div class="split">

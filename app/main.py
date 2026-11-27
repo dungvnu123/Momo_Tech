@@ -134,8 +134,11 @@ def alert_row(r):
 
 @app.get("/api/alerts")
 def alerts(day: str = "", date_from: str = "", date_to: str = "", severity: str = "", kind: str = "", verdict: str = "",
-           min_conf: float = 0, latest: bool = True, q: str = "", sort: str = "priority", limit: int = 200):
+           min_conf: float = 0, latest: bool = True, q: str = "", sort: str = "priority", limit: int = 200,
+           hour_from: int = 0, hour_to: int = 24):
     where, p = ["1=1"], []
+    if hour_from > 0 or hour_to < 24:   # khung giờ trong ngày [hour_from, hour_to)
+        where.append("CAST(substr(ts, 12, 2) AS INT) >= ? AND CAST(substr(ts, 12, 2) AS INT) < ?"); p += [hour_from, hour_to]
     if day:
         where.append("day = ?"); p.append(day)
     if date_from:
@@ -166,6 +169,15 @@ def alerts(day: str = "", date_from: str = "", date_to: str = "", severity: str 
 def alert_days():
     return tools.q("SELECT day, COUNT(*) n, SUM(severity='khan') khan, SUM(severity='cao') cao, SUM(severity='tb') tb "
                    "FROM alerts GROUP BY day ORDER BY day")
+
+
+@app.get("/api/alerts/hours")
+def alert_hours(day: str = ""):
+    """Số cảnh báo theo giờ trong ngày (0–23); có `day` thì chỉ tính ngày đó."""
+    rows = tools.q("SELECT CAST(substr(ts, 12, 2) AS INT) h, COUNT(*) n, SUM(severity='khan') khan, SUM(severity='cao') cao, "
+                   "SUM(severity='tb') tb FROM alerts WHERE (? = '' OR day = ?) GROUP BY h", day, day)
+    by = {r["h"]: r for r in rows}
+    return [by.get(h, {"h": h, "n": 0, "khan": 0, "cao": 0, "tb": 0}) for h in range(24)]
 
 
 LABEL = {"dev": "Thiết bị", "ref": "SĐT tham chiếu", "ip": "Dải IP", "sim": "Lô SIM", "rcv": "Nơi nhận tiền"}
