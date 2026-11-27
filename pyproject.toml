@@ -6,6 +6,7 @@ requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.165.0",
     "langgraph>=1.2.24",
+    "networkx>=3.7",
     "pydantic>=2.14.4",
     "uvicorn>=0.54.0",
 ]

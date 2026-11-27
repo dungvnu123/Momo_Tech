@@ -21,6 +21,7 @@ Kết quả: `data/applications.csv` (200.000 hồ sơ), `data/wallet_transfers.
 
 ## Trạng thái
 - [x] BaseAgent + LangGraph, AgentManager và controller FastAPI
+- [x] Module graph dữ liệu riêng: SQLite, quan hệ có nguồn bằng chứng và graph con NetworkX
 - [x] Sinh dữ liệu mô phỏng + baseline luật
 - [x] Tài liệu thiết kế
 - [ ] Lá chắn, Lưới, Sàng lọc AI, Thám tử
@@ -52,3 +53,11 @@ Nếu `uv` chưa có trong PATH, bản cục bộ của workspace này nằm t�
 Thư mục `.tools/` không được commit; máy khác cần cài uv trước.
 
 Chi tiết mở rộng nền tảng: [docs/agent_foundation.md](docs/agent_foundation.md).
+
+Graph dữ liệu: [docs/data_graph.md](docs/data_graph.md).
+
+```bash
+uv run gen_data.py
+uv run python -m app.graph build
+uv run python -m app.graph inspect app:HS00001 --depth 2
+```
