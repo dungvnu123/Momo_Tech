@@ -1,0 +1,704 @@
+{
+  "id": "thienla-backend-agent-pipeline",
+  "title": "Backend → Full Agent → Kết quả",
+  "kind": "flow",
+  "look": "flat",
+  "visibility": "private",
+  "doc_md": "",
+  "group": "Thiên La",
+  "subtitle": "Theo code đang chạy: snapshot cảnh báo → Gemini + tool → kiểm chứng → lưu case → SSE về giao diện.",
+  "duration": "5 phút",
+  "level": "Pipeline thực tế",
+  "learn": [
+    "Backend tạo đầu vào; LLM chọn bước đọc; tool chỉ trả dữ liệu có nguồn",
+    "Giới hạn 12 tool call, tính cả submit_case; kết luận sai nguồn phải sửa",
+    "Đề xuất xử lý giao dịch tách khỏi kết luận vai trò người vay",
+    "Chỉ phiên completed được lưu; lỗi không ghi đè kết quả cũ"
+  ],
+  "notes": [],
+  "nodes": [
+    {
+      "id": "s1",
+      "type": "start",
+      "label": "Bắt đầu",
+      "explain": "",
+      "step": 0,
+      "color": "",
+      "x": 60,
+      "y": -120,
+      "notes": [],
+      "icon": "",
+      "badge": ""
+    },
+    {
+      "id": "p2",
+      "type": "process",
+      "label": "Dữ liệu và cảnh báo có sẵn",
+      "explain": "Demo: gen_data.py sinh CSV; build.py chạy Engine theo thời gian và ghi thienla.db. Engine + mock_ai.py dựng cảnh báo/kết luận mẫu bằng luật, không gọi LLM. Đây là dữ liệu mô phỏng; chưa có kết nối thật tới ngân hàng, ví hay SIMO.",
+      "step": 1,
+      "color": "",
+      "x": 60,
+      "y": 40,
+      "notes": [],
+      "icon": "database",
+      "badge": "backend"
+    },
+    {
+      "id": "p3",
+      "type": "process",
+      "label": "Bấm Điều tra",
+      "explain": "web/app.js: runInvestigate(alert_id) gọi GET /api/alerts/{aid}/investigate. Request chỉ gửi ID cảnh báo, không gửi toàn bộ graph hoặc prompt tự do.",
+      "step": 2,
+      "color": "",
+      "x": 60,
+      "y": 200,
+      "notes": [],
+      "icon": "laptop",
+      "badge": "EventSource"
+    },
+    {
+      "id": "p4",
+      "type": "process",
+      "label": "Kiểm tra request",
+      "explain": "app/middleware/: nhận/tạo X-Request-ID và ghi log trạng thái, thời gian. Nếu cấu hình APP_API_KEY thì /api/* cần X-API-Key; không hợp lệ trả 401. Demo giao diện local hiện để khóa service trống. Middleware không suy luận gian lận.",
+      "step": 3,
+      "color": "",
+      "x": 60,
+      "y": 360,
+      "notes": [],
+      "icon": "lock",
+      "badge": "ASGI"
+    },
+    {
+      "id": "p5",
+      "type": "process",
+      "label": "Đọc snapshot cảnh báo",
+      "explain": "backend/http/alerts.py → Tools.alert(aid): đọc app_ids, signals, kind, transfer_id và ts. Không tìm thấy trả 404. BackendAgentTools chỉ cho đọc hồ sơ/giao dịch/tin báo đã xuất hiện tới ts. Nếu không có hồ sơ hợp lệ, trả case status=failed, reason=snapshot_empty.",
+      "step": 4,
+      "color": "",
+      "x": 60,
+      "y": 520,
+      "notes": [],
+      "icon": "file",
+      "badge": "alert.ts"
+    },
+    {
+      "id": "p6",
+      "type": "process",
+      "label": "Khởi tạo Full Agent",
+      "explain": "BackendAI.investigate tạo InvestigationAgent và truyền tools_factory=BackendAgentTools. Dùng backend/investigation_prompt.md; Agent tạo run_id, messages, steps và LangGraph. request_id theo dõi HTTP; run_id theo dõi phiên điều tra. Không gửi toàn bộ dữ liệu cho model.",
+      "step": 5,
+      "color": "#e5dcf5",
+      "x": 440,
+      "y": 40,
+      "notes": [],
+      "icon": "gear",
+      "badge": "kế thừa BaseAgent"
+    },
+    {
+      "id": "p7",
+      "type": "process",
+      "label": "Gemini chọn bước tiếp theo",
+      "explain": "workflow.model_node → GeminiToolClient.complete(messages, definitions). Model nhận prompt + lịch sử các kết quả tool + schema tool. SDK tắt tự chạy hàm: LLM chỉ đề nghị tool_call, code kiểm tra và thực thi. Lượt cuối chỉ cung cấp submit_case. Tổng tối đa 12 call, gồm call sai và submit_case.",
+      "step": 6,
+      "color": "#e5dcf5",
+      "x": 440,
+      "y": 200,
+      "notes": [],
+      "icon": "cloud",
+      "badge": "model node"
+    },
+    {
+      "id": "d8",
+      "type": "decision",
+      "label": "Tool call hợp lệ?",
+      "explain": "Code kiểm tra: có gọi tool, ID call không trùng, batch không vượt ngân sách, submit_case gọi riêng và lượt cuối chỉ được nộp kết luận. Sai giao thức thì dừng phiên.",
+      "step": 7,
+      "color": "",
+      "x": 440,
+      "y": 360,
+      "notes": [],
+      "icon": "",
+      "badge": ""
+    },
+    {
+      "id": "d9",
+      "type": "decision",
+      "label": "Đọc dữ liệu hay nộp case?",
+      "explain": "Tool đọc đi vào tools_node. submit_case đi vào kiểm chứng kết luận. Agent không có tool chuyển tiền, liên hệ khách hay phong tỏa tài khoản.",
+      "step": 8,
+      "color": "",
+      "x": 440,
+      "y": 520,
+      "notes": [],
+      "icon": "",
+      "badge": ""
+    },
+    {
+      "id": "p10",
+      "type": "process",
+      "label": "Tool truy vấn dữ liệu có nguồn",
+      "explain": "backend/agent_tools.py + evidence/: get_cluster, get_transfer, get_application, money_flow, reports_mentioning, account_senders, tech_profile, timeline. SQL bị giới hạn phạm vi và thời điểm; che thông tin cá nhân, dùng token nơi nhận theo phiên. Chi tiết giao dịch/tin báo/người gửi có phân trang tối đa 50, next_offset khi còn dữ liệu. Cờ SIMO và nguồn khớp tin báo được giữ lại; khớp số ngân hàng chưa xác minh phải ghi rõ.",
+      "step": 9,
+      "color": "#e5dcf5",
+      "x": 440,
+      "y": 680,
+      "notes": [],
+      "icon": "database",
+      "badge": "SQLite chỉ đọc"
+    },
+    {
+      "id": "p11",
+      "type": "process",
+      "label": "Gắn tool_call_id và đọc tiếp",
+      "explain": "ToolStep giữ tên tool, tool_call_id và JSON kết quả. JSON được thêm vào messages cho lượt LLM tiếp theo. Backend đổi event tool_result thành SSE type=step cho giao diện. Tool trả lỗi có cấu trúc thì model có thể đổi truy vấn; lỗi/timeout thực thi làm phiên dừng.",
+      "step": 10,
+      "color": "#e5dcf5",
+      "x": 440,
+      "y": 840,
+      "notes": [],
+      "icon": "file",
+      "badge": "tool_result → step"
+    },
+    {
+      "id": "p12",
+      "type": "process",
+      "label": "submit_case: kết quả có cấu trúc",
+      "explain": "CaseSubmission: verdict fraud_ring/victims/benign/inconclusive, summary, evidence, benign_explanation, missing_information, actions và transaction_assessments. Mỗi đề xuất giao dịch có transfer_id, allow/warn/hold/review, lý do và evidence.source. confidence do model tự đánh giá, chưa hiệu chuẩn thành xác suất gian lận.",
+      "step": 11,
+      "color": "",
+      "x": 820,
+      "y": 40,
+      "notes": [],
+      "icon": "check",
+      "badge": "không trả văn bản suông"
+    },
+    {
+      "id": "d13",
+      "type": "decision",
+      "label": "Schema và bằng chứng đúng?",
+      "explain": "workflow.validate_submission kiểm tra schema, nguồn là call đọc thành công trong phiên, app_id đã quan sát, members/victims không chồng nhau và bảo vệ người tự báo bị lừa. evidence/validation.py kiểm tra đúng giao dịch gây cảnh báo và nguồn chứa giao dịch đó. hold cần SIMO hoặc cảnh báo nơi nhận có phạm vi đã xác minh; mock/khớp số ngân hàng chưa đủ. inconclusive phải nêu cụ thể thông tin thiếu. Các kiểm tra không gán verdict hay confidence cố định.",
+      "step": 12,
+      "color": "",
+      "x": 820,
+      "y": 200,
+      "notes": [],
+      "icon": "",
+      "badge": ""
+    },
+    {
+      "id": "p14",
+      "type": "process",
+      "label": "Phản hồi lỗi để model sửa",
+      "explain": "Trả error.fields/message, available_evidence_sources và observed_app_ids về model. Kết luận không hợp lệ chưa được chấp nhận hoặc lưu. Còn ngân sách thì sửa và nộp lại; hết lượt thì dừng.",
+      "step": 13,
+      "color": "#f8d8cd",
+      "x": 820,
+      "y": 360,
+      "notes": [],
+      "icon": "alert",
+      "badge": "invalid_case"
+    },
+    {
+      "id": "p15",
+      "type": "process",
+      "label": "Tạo InvestigationResult",
+      "explain": "Agent trả run_id, app_id, status, reason, case, steps, model_turns. Kết luận hợp lệ có status=completed, kể cả verdict=inconclusive. Timeout/provider/giao thức/hết lượt sinh failed hoặc limit_reached với kết luận dự phòng. Giới hạn mặc định: 180 giây/phiên, 30 giây/thao tác.",
+      "step": 14,
+      "color": "",
+      "x": 820,
+      "y": 520,
+      "notes": [],
+      "icon": "file",
+      "badge": "event done nội bộ"
+    },
+    {
+      "id": "d16",
+      "type": "decision",
+      "label": "Phiên completed?",
+      "explain": "Phân biệt kết luận hợp lệ nhưng còn thiếu dữ liệu với lỗi chạy model. Chỉ completed mới được ghi vào cases và cập nhật cảnh báo.",
+      "step": 15,
+      "color": "",
+      "x": 1200,
+      "y": 40,
+      "notes": [],
+      "icon": "",
+      "badge": ""
+    },
+    {
+      "id": "p17",
+      "type": "process",
+      "label": "Lưu case và dấu vết điều tra",
+      "explain": "backend/integration.py: INSERT OR REPLACE cases, UPDATE alerts.verdict/case_conf rồi commit. Body lưu source_evidence, tool_steps, model_turns và run_id để đọc lại. Đề xuất hold chỉ là đề xuất cho người có thẩm quyền; code không thực hiện giữ tiền.",
+      "step": 16,
+      "color": "#d8eddf",
+      "x": 1200,
+      "y": 200,
+      "notes": [],
+      "icon": "database",
+      "badge": "commit SQLite"
+    },
+    {
+      "id": "p18",
+      "type": "process",
+      "label": "Dừng an toàn, giữ kết quả cũ",
+      "explain": "Lỗi trong phiên/timeout/hết lượt: trả failed hoặc limit_reached và không lưu đè case cũ. Snapshot rỗng cũng trả failed. Lỗi mạng/DB có thể kết thúc stream trước khi nhận case; giao diện mở lại nút thử.",
+      "step": 17,
+      "color": "#f8d8cd",
+      "x": 820,
+      "y": 840,
+      "notes": [],
+      "icon": "alert",
+      "badge": "không ghi đè"
+    },
+    {
+      "id": "p19",
+      "type": "process",
+      "label": "Dừng request hoặc stream",
+      "explain": "401 do khóa service, 404 do ID cảnh báo không tồn tại: chưa chạy Agent. Thiếu cấu hình Gemini được phát hiện trước vòng lặp: request/stream có thể kết thúc lỗi, không có case mới để lưu.",
+      "step": 17,
+      "color": "#f8d8cd",
+      "x": 60,
+      "y": 840,
+      "notes": [],
+      "icon": "lock",
+      "badge": "401 / 404 / cấu hình"
+    },
+    {
+      "id": "p20",
+      "type": "process",
+      "label": "Backend trả kết quả qua SSE",
+      "explain": "BackendAI đổi done thành {type: case, case: ...}, giữ nguồn có cấu trúc và bản bằng chứng đọc được. Controller gửi data: JSON qua text/event-stream; các bước trước đó đã gửi type=step. Middleware chuyển tiếp chunk, không gom hết stream mới trả.",
+      "step": 18,
+      "color": "#d8eddf",
+      "x": 1200,
+      "y": 520,
+      "notes": [],
+      "icon": "server",
+      "badge": "type=case"
+    },
+    {
+      "id": "p21",
+      "type": "process",
+      "label": "Giao diện và đội rủi ro xem",
+      "explain": "web/app.js: EventSource nhận step/case, hiển thị đề xuất giao dịch, bằng chứng, giả thuyết vô hại, thông tin thiếu và việc cần làm. Vai trò inconclusive không trình bày như xác suất 50%. Phiên lỗi được ghi là chưa hoàn thành. Đội rủi ro xác minh và quyết định ngoài Agent.",
+      "step": 19,
+      "color": "#d8eddf",
+      "x": 1200,
+      "y": 680,
+      "notes": [],
+      "icon": "user",
+      "badge": "showCase"
+    },
+    {
+      "id": "e22",
+      "type": "end",
+      "label": "Hoàn tất / chờ xác minh",
+      "explain": "",
+      "step": 20,
+      "color": "",
+      "x": 1200,
+      "y": 840,
+      "notes": [],
+      "icon": "",
+      "badge": ""
+    }
+  ],
+  "edges": [
+    {
+      "source": "s1",
+      "target": "p2",
+      "label": ""
+    },
+    {
+      "source": "p2",
+      "target": "p3",
+      "label": ""
+    },
+    {
+      "source": "p3",
+      "target": "p4",
+      "label": ""
+    },
+    {
+      "source": "p4",
+      "target": "p5",
+      "label": ""
+    },
+    {
+      "source": "p5",
+      "target": "p6",
+      "label": ""
+    },
+    {
+      "source": "p6",
+      "target": "p7",
+      "label": ""
+    },
+    {
+      "source": "p7",
+      "target": "d8",
+      "label": ""
+    },
+    {
+      "source": "d8",
+      "target": "d9",
+      "label": ""
+    },
+    {
+      "source": "p10",
+      "target": "p11",
+      "label": ""
+    },
+    {
+      "source": "p11",
+      "target": "p7",
+      "label": ""
+    },
+    {
+      "source": "p12",
+      "target": "d13",
+      "label": ""
+    },
+    {
+      "source": "p15",
+      "target": "d16",
+      "label": ""
+    },
+    {
+      "source": "p17",
+      "target": "p20",
+      "label": ""
+    },
+    {
+      "source": "p18",
+      "target": "p20",
+      "label": ""
+    },
+    {
+      "source": "p20",
+      "target": "p21",
+      "label": ""
+    },
+    {
+      "source": "p21",
+      "target": "e22",
+      "label": ""
+    },
+    {
+      "source": "p19",
+      "target": "e22",
+      "label": ""
+    },
+    {
+      "source": "p4",
+      "target": "p19",
+      "label": "khóa sai"
+    },
+    {
+      "source": "p5",
+      "target": "p19",
+      "label": "không có cảnh báo"
+    },
+    {
+      "source": "p5",
+      "target": "p18",
+      "label": "snapshot rỗng"
+    },
+    {
+      "source": "p6",
+      "target": "p19",
+      "label": "thiếu cấu hình"
+    },
+    {
+      "source": "p7",
+      "target": "p18",
+      "label": "provider / timeout"
+    },
+    {
+      "source": "d8",
+      "target": "p18",
+      "label": "sai giao thức / vượt lượt"
+    },
+    {
+      "source": "d9",
+      "target": "p10",
+      "label": "tool đọc"
+    },
+    {
+      "source": "d9",
+      "target": "p12",
+      "label": "submit_case"
+    },
+    {
+      "source": "p10",
+      "target": "p18",
+      "label": "lỗi / timeout"
+    },
+    {
+      "source": "d13",
+      "target": "p15",
+      "label": "hợp lệ"
+    },
+    {
+      "source": "d13",
+      "target": "p14",
+      "label": "chưa hợp lệ"
+    },
+    {
+      "source": "p14",
+      "target": "p7",
+      "label": "còn lượt"
+    },
+    {
+      "source": "p14",
+      "target": "p18",
+      "label": "hết lượt"
+    },
+    {
+      "source": "d16",
+      "target": "p17",
+      "label": "có"
+    },
+    {
+      "source": "d16",
+      "target": "p18",
+      "label": "không"
+    }
+  ],
+  "steps": [
+    {
+      "n": 1,
+      "title": "Dữ liệu xuất phát từ đâu?",
+      "body": "Demo dựng cảnh báo trước bằng build.py/Engine trên dữ liệu mô phỏng. LLM thật bắt đầu khi bạn bấm Điều tra; không có giao dịch ngân hàng thật được đọc tự động.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 2,
+      "title": "Backend nhận yêu cầu",
+      "body": "Người dùng chọn alert_id trên Lưới & Thám tử. Giao diện mở EventSource tới GET /api/alerts/{aid}/investigate.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 3,
+      "title": "Middleware làm phần chung",
+      "body": "Tạo request_id, ghi thời gian và kiểm tra khóa nếu có cấu hình. Middleware không đánh giá gian lận.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 4,
+      "title": "Đóng phạm vi điều tra",
+      "body": "Backend đọc snapshot tại alert.ts. Những giao dịch hoặc tin báo xuất hiện sau thời điểm đó không được đưa vào phiên này.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 5,
+      "title": "Full Agent vẫn kế thừa BaseAgent",
+      "body": "BackendAI truyền bộ tool snapshot vào InvestigationAgent. Agent dựng LangGraph và dùng prompt riêng cho backend, không tạo một Agent nghiệp vụ khác.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 6,
+      "title": "LLM chọn hành động",
+      "body": "Gemini chỉ thấy dữ liệu đã đọc và schema tool. Nó chọn tool cần gọi; không tự chạy SQL, không nhận cả graph và không có quyền giữ tiền.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 7,
+      "title": "Code kiểm tra giao thức",
+      "body": "Call ID phải duy nhất, batch trong ngân sách, submit_case gọi riêng. Lượt cuối chỉ được nộp kết luận; tổng tối đa 12 tool call.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 8,
+      "title": "Hai đường đi trong vòng lặp",
+      "body": "Cần thêm dữ liệu thì gọi tool đọc. Có thể tổng hợp thì gọi submit_case. Chưa đủ chứng cứ vẫn được nộp inconclusive, nhưng phải nêu thiếu gì.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 9,
+      "title": "Tool đọc và che dữ liệu",
+      "body": "get_transfer giữ SIMO và ngữ cảnh người nhận; reports_mentioning nối tin báo với token đúng người nhận. Dữ liệu có as_of, nguồn và giới hạn trang.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 10,
+      "title": "Kết quả quay lại LLM",
+      "body": "ToolStep có tool_call_id. Kết quả được thêm vào messages, đồng thời giao diện nhận type=step. Model dùng bằng chứng đó để chọn bước tiếp theo.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 11,
+      "title": "Tách hai loại kết quả",
+      "body": "Vai trò người vay nằm trong verdict. Đề xuất xử lý từng giao dịch nằm trong transaction_assessments. Giao dịch có thể cần xác minh dù vai trò người vay chưa rõ.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 12,
+      "title": "Kiểm chứng bằng code",
+      "body": "Không chấp nhận nguồn bịa, app_id chưa thấy hoặc đề xuất sai giao dịch. Hold cần căn cứ nơi nhận đã xác minh; khớp số ngân hàng hay nhãn mock không tự thành bằng chứng chắc chắn.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 13,
+      "title": "Sai thì model sửa",
+      "body": "Code trả lỗi và các nguồn hợp lệ để LLM sửa. Không âm thầm nhận một kết luận sai schema. Hết ngân sách thì dừng và giữ kết quả cũ.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 14,
+      "title": "Agent trả kết quả phiên",
+      "body": "done nội bộ chứa case, steps, run_id, model_turns, status và reason. Completed + inconclusive là kết luận hợp lệ về giới hạn dữ liệu; failed là lỗi thực thi.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 15,
+      "title": "Chọn có lưu hay không",
+      "body": "Backend chỉ lưu khi status=completed. Không lấy failed/limit_reached ghi đè case đã có.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 16,
+      "title": "Lưu để mở lại được",
+      "body": "cases giữ kết luận, source_evidence và tool_steps; alerts giữ verdict/case_conf để danh sách cập nhật. Chưa thực hiện phong tỏa hoặc liên hệ khách.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 17,
+      "title": "Nhánh lỗi được hiển thị riêng",
+      "body": "401/404 dừng trước Agent. Lỗi trong phiên trả failed/limit_reached khi có thể; stream đứt hoặc thiếu cấu hình có thể không có case cuối. Không giả thành một kết luận 50%.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 18,
+      "title": "Trả về giao diện",
+      "body": "Backend chuyển event done thành SSE type=case. Các bước đọc trước đó đã được phát dần; không chờ hết phiên mới hiển thị toàn bộ.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 19,
+      "title": "Ví dụ từ ca đã thử",
+      "body": "Dữ liệu mô phỏng AL000326: CK77099 có SIMO=true và 3 tin báo khớp số chưa xác minh ngân hàng. Một phiên đã thử đề xuất hold để xác minh, còn vai trò người vay là inconclusive; lần chạy khác có thể khác. Không tự giữ tiền.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    },
+    {
+      "n": 20,
+      "title": "Đội rủi ro quyết định",
+      "body": "Xem bằng chứng và thông tin thiếu, xác minh trạng thái giao dịch/người nhận và trao đổi với khách theo quy trình. Feature Flow chỉ trình chiếu pipeline; mở Lưới & Thám tử để chạy Agent thật.",
+      "note": "",
+      "note_type": "info",
+      "badge": ""
+    }
+  ],
+  "arrows": [],
+  "groups": [
+    {
+      "id": "backend",
+      "label": "1. Backend tạo đầu vào",
+      "explain": "",
+      "color": "#2f80c0",
+      "pad": 26,
+      "x": null,
+      "y": null,
+      "w": null,
+      "h": null,
+      "members": [
+        "p2",
+        "p3",
+        "p4",
+        "p5"
+      ]
+    },
+    {
+      "id": "agent",
+      "label": "2. Agent: model ↔ tool",
+      "explain": "",
+      "color": "#7b5ea7",
+      "pad": 26,
+      "x": null,
+      "y": null,
+      "w": null,
+      "h": null,
+      "members": [
+        "p6",
+        "p7",
+        "d8",
+        "d9",
+        "p10",
+        "p11"
+      ]
+    },
+    {
+      "id": "grounding",
+      "label": "3. Kiểm chứng kết luận",
+      "explain": "",
+      "color": "#c77700",
+      "pad": 26,
+      "x": null,
+      "y": null,
+      "w": null,
+      "h": null,
+      "members": [
+        "p12",
+        "d13",
+        "p14",
+        "p15"
+      ]
+    },
+    {
+      "id": "output",
+      "label": "4. Lưu và trả kết quả",
+      "explain": "",
+      "color": "#20875e",
+      "pad": 26,
+      "x": null,
+      "y": null,
+      "w": null,
+      "h": null,
+      "members": [
+        "d16",
+        "p17",
+        "p20",
+        "p21"
+      ]
+    }
+  ]
+}

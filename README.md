@@ -50,6 +50,12 @@ API `/api/investigations` dùng graph chỉ định bởi `GRAPH_DATABASE`, là 
 toàn bộ dữ liệu đã build. Hai đường chạy dùng cùng Agent và bộ kiểm tra kết luận.
 Chi tiết: [docs/backend_integration.md](docs/backend_integration.md).
 
+Xem [pipeline Backend → Full Agent → Kết quả](http://127.0.0.1:4420/flows/#/thienla-backend-agent-pipeline)
+trong Feature Flow, bấm **Trình chiếu** để xem 20 bước theo code đang chạy.
+Luồng mô tả endpoint, snapshot, vòng model/tool, kiểm tra bằng chứng, lưu case,
+SSE và nhánh lỗi. Dựng lại các sơ đồ bằng `uv run python -X utf8 flows/build_flows.py`;
+nguồn luồng này nằm ở `flows/backend_agent.py`.
+
 ## Trạng thái
 - [x] BaseAgent + LangGraph, AgentManager và controller FastAPI
 - [x] Module graph dữ liệu riêng: SQLite, quan hệ có nguồn bằng chứng và graph con NetworkX
