@@ -1,7 +1,7 @@
 from collections import defaultdict
 from datetime import datetime
 
-from ..mock_ai import plain
+from app.graph.normalize import name_match
 
 
 def boolean(value):
@@ -36,7 +36,7 @@ def transaction_view(context, row, reports):
     disbursed_at = row.get("disbursed_at")
     minutes = ((datetime.fromisoformat(row["created_at"]) - datetime.fromisoformat(disbursed_at)).total_seconds() / 60
                if disbursed_at and disbursed_at <= row["created_at"] else None)
-    matches = " ".join(plain(row["to_name"]).upper().split()) == " ".join(plain(row["applicant_name"]).upper().split())
+    matches = name_match(row.get("to_name", ""), row.get("applicant_name", ""))
     matching_reports = [r for r in reports if node_id in r["matched_recipient_node_ids"] and r["verdict"] in {"scam", "suspicious"}]
     return {
         "transfer_id": row["transfer_id"], "app_id": row["application_id"],
@@ -67,7 +67,7 @@ def money_flow(context, ids, reports, offset=0, limit=50):
     rapid, senders, loans = defaultdict(int), defaultdict(set), {}
     for row in views:
         loans[row["app_id"]] = row["loan_amount"]
-        if row["minutes_after_disbursal"] is not None and 0 <= row["minutes_after_disbursal"] <= 120 and not row["recipient_name_matches_applicant"]:
+        if row["minutes_after_disbursal"] is not None and 0 <= row["minutes_after_disbursal"] <= 120 and row["recipient_name_matches_applicant"] is False:
             rapid[row["app_id"]] += row["amount"]
             senders[row["recipient_node_id"]].add(row["app_id"])
     fast = sorted(app for app, amount in rapid.items() if amount >= 0.8 * loans[app])

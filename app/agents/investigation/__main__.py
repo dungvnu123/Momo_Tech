@@ -11,7 +11,7 @@ from .demo import DemoInvestigationClient
 
 async def execute(args):
     client = DemoInvestigationClient() if args.demo else configured_tool_client()
-    agent = InvestigationAgent(client, database=args.database)
+    agent = InvestigationAgent(client, database=args.database, require_assessments=not args.demo)
     context = AgentContext(metadata={"cluster_id": args.cluster_id} if args.cluster_id else {})
     if args.stream:
         async for event in agent.stream(args.app_id, context):

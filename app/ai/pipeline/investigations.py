@@ -7,7 +7,7 @@ from app.types.schemas import AgentContext
 
 async def investigate_groups(client, database, groups, decisions, limit, directory, *, on_result=None):
     by_id = {item.cluster_id: item for item in decisions}
-    agent = InvestigationAgent(client, database=database)
+    agent = InvestigationAgent(client, database=database, require_assessments=True)
     result, investigated = [], 0
     for group in groups:
         decision = by_id[group["cluster_id"]]

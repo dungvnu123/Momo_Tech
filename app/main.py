@@ -46,7 +46,7 @@ def create_app(llm_client: LLMClient | None = None, *, tool_llm_client=None,
     tool_client = tool_llm_client if tool_llm_client is not None else configured_tool_client()
     application.state.tool_llm_client = tool_client
     database_path = graph_database or os.environ.get("GRAPH_DATABASE", "data/graph.db")
-    application.state.investigation_agent = InvestigationAgent(tool_client, database=database_path)
+    application.state.investigation_agent = InvestigationAgent(tool_client, database=database_path, require_assessments=True)
     application.include_router(investigation_router)
     application.state.ai_service = AIService(tool_client, cache_path=ai_cache)
     backend_path = None if backend_database is False else backend_database or os.environ.get("THIENLA_DB", "thienla.db")

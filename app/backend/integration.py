@@ -41,7 +41,7 @@ class BackendAI:
                    "members": [], "victims": [], "evidence": [], "actions": [], "mode": "gemini",
                    "status": "failed", "reason": "snapshot_empty", "missing_information": ["Không có hồ sơ hợp lệ tại thời điểm cảnh báo."]}}
             return
-        agent = InvestigationAgent(self.client, tools_factory=lambda: tools)
+        agent = InvestigationAgent(self.client, tools_factory=lambda: tools, require_assessments=True)
         agent.prompt_file = Path(__file__).with_name("investigation_prompt.md")
         context = AgentContext(metadata={"cluster_id": alert["cluster_id"]})
         async for event, data in agent._events(tools.ids[0], context):

@@ -44,13 +44,18 @@ class PipelineClient:
         else:
             previous = [json.loads(m.content) for m in messages if m.role == "tool"]
             if not previous:
-                name, output = "get_cluster", {"cluster_id": "C1"}
+                name, output = "cluster_money_flow", {"cluster_id": "C1"}
             elif len(previous) == 1:
                 name, output = "get_application", {"app_id": "A"}
             else:
                 name, output = "submit_case", {"verdict": "victims", "confidence": .7,
                     "members": [], "victims": ["A"], "evidence": [{"claim": "Indexed victim report", "source": previous[-1]["tool_call_id"]}],
                     "benign_explanation": "Considered an ordinary transfer; an indexed self-report calls for support", "actions": ["Verify with customer"]}
+                output["cluster_assessment"] = {"level": "suspicious", "reason": "Report-linked transfer needs review",
+                    "evidence": [{"claim": "Cluster flow and reports observed", "source": previous[0]["tool_call_id"]}],
+                    "limitations": ["Only part of the reports are indexed"]}
+                output["application_assessments"] = [{"app_id": "A", "role": "possible_victim", "reason": "Indexed self-report",
+                    "evidence": [{"claim": "Self-report belongs to A", "source": previous[-1]["tool_call_id"]}]}]
         self.inputs.extend(m.content for m in messages if m.role == "user")
         self.calls.append(name)
         return ModelTurn(tool_calls=[ToolCall(id=f"call-{len(self.calls)}", name=name, arguments=output)])
@@ -83,12 +88,24 @@ class PipelineTests(unittest.IsolatedAsyncioTestCase):
         runner = PipelineService(client, self.fixture.database, self.root)
         result = await runner.run(self.config())
         self.assertEqual(result["status"], "completed", result)
-        self.assertEqual(client.calls, ["report_verdict", "er_decisions", "triage", "get_cluster", "get_application", "submit_case"])
+        self.assertEqual(client.calls, ["report_verdict", "er_decisions", "triage", "cluster_money_flow", "get_application", "submit_case"])
         self.assertEqual(result["model_calls"], len(client.calls))
         self.assertEqual(result["clusters"][0]["case"]["verdict"], "victims")
         self.assertEqual(result["stages"]["reports"]["result"]["coverage"]["indexed"], 1)
         self.assertEqual(result["stages"]["reports"]["result"]["coverage"]["total"], 2)
         self.assertEqual(runner.read(result["run_id"]), result)
+        trace = runner.read_trace(result["run_id"], "C1")
+        self.assertEqual(trace["case"]["cluster_assessment"]["level"], "suspicious")
+        self.assertEqual(trace["steps"][0]["name"], "cluster_money_flow")
+        with self.assertRaises(FileNotFoundError):
+            runner.read_trace(result["run_id"], "unknown")
+        manifest = self.root / result["run_id"] / "result.json"
+        unsafe = json.loads(manifest.read_text(encoding="utf-8"))
+        unsafe["clusters"][0]["trace_file"] = "../outside.json"
+        manifest.write_text(json.dumps(unsafe), encoding="utf-8")
+        with self.assertRaises(FileNotFoundError):
+            runner.read_trace(result["run_id"], "C1")
+        manifest.write_text(json.dumps(result), encoding="utf-8")
         directory = self.root / result["run_id"]
         with (directory / "source" / "scam_reports.csv").open(encoding="utf-8-sig") as f:
             self.assertNotIn("analysis", next(csv.reader(f)))
@@ -145,6 +162,10 @@ class PipelineTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(score["false_offender_flags"], 0)
         self.assertEqual(score["selected_applications"], 2)
         self.assertEqual(score["inconclusive_rate"], 0)
+        self.assertEqual(score["cluster_assessment_levels"], {"suspicious": 1})
+        self.assertEqual(score["application_assessments_count"], 1)
+        self.assertEqual(score["applications_not_assessed"], 1)
+        self.assertEqual(score["possible_victims_matching_synthetic_victims"], 1)
 
     async def test_api_runs_and_loads_result_with_fixed_server_side_paths(self):
         app = create_app(tool_llm_client=PipelineClient(), backend_database=self.fixture.database,
@@ -154,6 +175,9 @@ class PipelineTests(unittest.IsolatedAsyncioTestCase):
             response = client.post("/api/ai/pipeline/run", json=self.config().model_dump())
             self.assertEqual(response.status_code, 200, response.text)
             self.assertEqual(response.json()["status"], "completed")
+            trace_url = "/api/ai/pipeline/runs/" + response.json()["run_id"] + "/traces/C1"
+            self.assertEqual(client.get(trace_url).json()["steps"][0]["name"], "cluster_money_flow")
+            self.assertEqual(client.get(trace_url.replace("C1", "unknown")).status_code, 404)
             for _ in range(3):
                 self.assertEqual(client.get("/api/ai/pipeline/runs/" + response.json()["run_id"]).status_code, 200)
             self.assertEqual(client.get("/api/ai/pipeline/runs/" + "0" * 32).status_code, 404)
@@ -164,4 +188,5 @@ class PipelineTests(unittest.IsolatedAsyncioTestCase):
         with TestClient(app) as client:
             self.assertEqual(client.post("/api/ai/pipeline/run", json={}).status_code, 401)
             self.assertEqual(client.get("/api/ai/pipeline/runs/" + "0" * 32).status_code, 401)
+            self.assertEqual(client.get("/api/ai/pipeline/runs/" + "0" * 32 + "/traces/C1").status_code, 401)
         self.assertFalse(self.root.exists())

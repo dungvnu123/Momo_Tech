@@ -2,7 +2,7 @@
 
 Các tool đọc dữ liệu nằm trong `app/tools/`, dùng `GraphStore`/`AIStore` để
 truy vấn SQLite theo ID. Đã gắn vào Agent điều tra; không có endpoint công
-khai cho từng tool. Bộ tool hiện có 10 hàm đọc và submit_case ở workflow.
+khai cho từng tool. Bộ tool hiện có 11 hàm đọc và submit_case ở workflow.
 
 | File | Trách nhiệm |
 |---|---|
@@ -55,6 +55,9 @@ result = tools.call("neighbors", {
 
 ## Phạm vi từng tool
 
+- `cluster_money_flow(cluster_id? hoặc app_ids?, limit?, offset?)`: tổng hợp
+  dòng tiền tối đa 100 hồ sơ, có thống kê từng hồ sơ, nơi nhận chung và nguồn.
+  Tổng không phụ thuộc trang chi tiết. Xem [đánh giá cụm](cluster_assessments.md).
 - `get_application(app_id)`: lấy hồ sơ theo khóa chính, chấp nhận cả `HS00001`
   và `app:HS00001`; giữ tín hiệu kỹ thuật và che CCCD/SĐT.
 - `neighbors(node_id, edge_type?, direction?, limit?, offset?)`: lấy cạnh kề

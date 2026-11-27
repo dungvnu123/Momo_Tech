@@ -7,7 +7,7 @@ import test_backend_integration as fixtures
 from app.agents.investigation.schemas import CaseSubmission, ToolStep, submit_definition
 from app.services.gemini_schema import tool_schema
 from app.agents.investigation.workflow import validate_submission
-from test_investigation import ScriptedClient, submission, turn
+from test_investigation import ScriptedClient, submission, detailed_submission, turn
 
 
 class InvestigationDecisionTests(unittest.TestCase):
@@ -104,9 +104,12 @@ class InvestigationDecisionTests(unittest.TestCase):
             tools.validate_case(validate_submission(args, [step]), [step])
 
     def test_workflow_repairs_generic_conclusion_instead_of_accepting_it(self):
-        model = ScriptedClient(turn("transfer-read", "get_transfer", {"transfer_id": "CK00001"}),
+        good = self.case()
+        good["cluster_assessment"] = detailed_submission("scope-read")["cluster_assessment"]
+        model = ScriptedClient(turn("scope-read", "cluster_money_flow", {}),
+                               turn("transfer-read", "get_transfer", {"transfer_id": "CK00001"}),
                                turn("invalid-finish", "submit_case", submission("transfer-read")),
-                               turn("finish", "submit_case", self.case()))
+                               turn("finish", "submit_case", good))
         client = self.fixture.client(model)
         response = client.get("/api/alerts/AL1/investigate")
         events = [json.loads(line[6:]) for line in response.text.splitlines() if line.startswith("data: ")]
@@ -114,8 +117,8 @@ class InvestigationDecisionTests(unittest.TestCase):
         self.assertEqual(case["status"], "completed")
         self.assertEqual(case["confidence"], 0.31)
         self.assertEqual(case["transaction_assessments"][0]["transfer_id"], "CK00001")
-        self.assertFalse(case["tool_steps"][1]["result"]["ok"])
-        self.assertTrue(case["tool_steps"][2]["result"]["ok"])
+        self.assertFalse(case["tool_steps"][2]["result"]["ok"])
+        self.assertTrue(case["tool_steps"][3]["result"]["ok"])
 
     def test_reports_are_joined_for_all_transfers_even_same_name_or_late(self):
         with sqlite3.connect(self.fixture.database) as db:

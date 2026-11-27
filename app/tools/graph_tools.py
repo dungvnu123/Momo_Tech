@@ -20,6 +20,16 @@ class GraphTools:
         return [{"name": name, "description": DESCRIPTIONS[name], "parameters": model.model_json_schema()}
                 for name, model in INPUTS.items()]
 
+    def assessment_scope(self, app_id, cluster_id=None):
+        with AIStore(self.database, read_only=True) as store:
+            if cluster_id:
+                record = store.ai_record("ai_clusters", cluster_id)
+                if record is None:
+                    raise ValueError("Requested cluster is unavailable")
+                return record["summary"]["app_ids"]
+            store.application(app_id)
+        return [app_id]
+
     def call(self, name: str, arguments: dict) -> dict:
         if name not in INPUTS:
             return self._error(name, "unknown_tool", "Tool is not registered")
@@ -52,6 +62,10 @@ class GraphTools:
 
     def money_flow(self, app_id: str, *, limit=20, offset=0) -> dict:
         return self.call("money_flow", {"app_id": app_id, "limit": limit, "offset": offset})
+
+    def cluster_money_flow(self, *, cluster_id=None, app_ids=None, limit=20, offset=0):
+        return self.call("cluster_money_flow", {"cluster_id": cluster_id, "app_ids": app_ids or [],
+                                                "limit": limit, "offset": offset})
 
     def get_evidence(self, edge_id: str) -> dict:
         return self.call("get_evidence", {"edge_id": edge_id})

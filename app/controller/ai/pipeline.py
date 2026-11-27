@@ -28,3 +28,11 @@ async def get_pipeline_run(run_id: UUID, request: Request):
         return request.app.state.pipeline_service.read(run_id.hex)
     except FileNotFoundError:
         raise HTTPException(404, "Pipeline run not found") from None
+
+
+@router.get("/runs/{run_id}/traces/{cluster_id}")
+async def get_pipeline_trace(run_id: UUID, cluster_id: str, request: Request):
+    try:
+        return request.app.state.pipeline_service.read_trace(run_id.hex, cluster_id)
+    except FileNotFoundError:
+        raise HTTPException(404, "Pipeline trace not found") from None

@@ -1,6 +1,6 @@
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, JsonValue, StringConstraints
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, StringConstraints, model_validator
 
 Identifier = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=256)]
 EdgeType = Literal[
@@ -45,6 +45,17 @@ class ClusterInput(ToolInput):
     cluster_id: Identifier
 
 
+class ClusterMoneyInput(PageInput):
+    cluster_id: Identifier | None = None
+    app_ids: list[Identifier] = Field(default_factory=list, max_length=100)
+
+    @model_validator(mode="after")
+    def scope(self):
+        if bool(self.cluster_id) == bool(self.app_ids) or len(set(self.app_ids)) != len(self.app_ids):
+            raise ValueError("Supply cluster_id or distinct app_ids, exclusively")
+        return self
+
+
 class ApplicationsInput(ToolInput):
     app_ids: list[Identifier] = Field(min_length=1, max_length=50)
 
@@ -62,6 +73,7 @@ class ToolResponse(BaseModel):
 
 
 INPUTS = {
+    "cluster_money_flow": ClusterMoneyInput,
     "get_application": ApplicationInput,
     "neighbors": NeighborsInput,
     "money_flow": MoneyFlowInput,
@@ -74,6 +86,7 @@ INPUTS = {
     "entity_info": NodeInput,
 }
 DESCRIPTIONS = {
+    "cluster_money_flow": "Read all-scope money aggregates, per-application summaries, shared recipients and source records. Supply cluster_id OR app_ids. Details paginate with limit/offset; counts cover all scope transfers.",
     "get_application": "Read a loan application and technical signals with personal identifiers masked.",
     "neighbors": "Read one-hop relations by node ID. Follow returned node IDs and paginate when truncated.",
     "money_flow": "Read outgoing transfers for an application, with evidence IDs and totals across all pages.",

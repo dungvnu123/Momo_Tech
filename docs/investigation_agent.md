@@ -1,5 +1,8 @@
 # Agent điều tra
 
+Đầu ra mới tách đánh giá cụm khỏi vai trò từng hồ sơ, dùng tool tổng hợp dòng
+tiền có nguồn. Xem [đánh giá cụm và vai trò](cluster_assessments.md).
+
 `InvestigationAgent` kế thừa `BaseAgent`, mở rộng workflow LangGraph thành
 `model → tool → model`, kết thúc bằng `submit_case`. Điểm vào hiện là một
 `app_id`, có thể kèm `cluster_id` đã được lưu. AI sàng lọc và các tool nghiệp

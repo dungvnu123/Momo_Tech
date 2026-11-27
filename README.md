@@ -105,6 +105,9 @@ Graph dữ liệu: [docs/data_graph.md](docs/data_graph.md).
 
 Tool truy vấn graph: [docs/graph_tools.md](docs/graph_tools.md).
 
+Tổng hợp dòng tiền, đánh giá cụm và vai trò từng hồ sơ có nguồn kiểm chứng:
+[docs/cluster_assessments.md](docs/cluster_assessments.md).
+
 Agent điều tra và cấu hình Gemini: [docs/investigation_agent.md](docs/investigation_agent.md).
 
 Toàn bộ module AI và cách kiểm tra: [docs/ai_pipeline.md](docs/ai_pipeline.md).

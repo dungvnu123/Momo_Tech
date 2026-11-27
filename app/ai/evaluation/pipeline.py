@@ -14,6 +14,20 @@ def score_pipeline(result, truth_file):
     clusters = result.get("clusters", [])
     selected = {app for cluster in result.get("candidates", clusters) for app in cluster["app_ids"]}
     completed = [c for c in clusters if c["status"] == "completed"]
+    cluster_levels = {}
+    roles, unassessed = [], 0
+    for item in completed:
+        case = item["case"]
+        if case.get("cluster_assessment"):
+            level = case["cluster_assessment"]["level"]
+            cluster_levels[level] = cluster_levels.get(level, 0) + 1
+        for assessment in case.get("application_assessments", []):
+            if assessment.get("assessment_status") == "not_assessed":
+                unassessed += 1
+            else:
+                roles.append(assessment)
+    suspected = {item["app_id"] for item in roles if item["role"] == "suspected_participant"}
+    possible_victims = {item["app_id"] for item in roles if item["role"] == "possible_victim"}
     offenders = {app for c in completed for app in c["case"]["members"]}
     recognized_victims = {app for c in completed for app in c["case"]["victims"]}
     skipped = {app for c in clusters if c["status"] == "skipped_by_triage" for app in c["app_ids"]}
@@ -37,6 +51,15 @@ def score_pipeline(result, truth_file):
         "false_offender_flags": len(offenders - fraud), "victims_flagged_as_offenders": len(offenders & victims),
         "known_issue_applications_skipped_by_triage": len(skipped & (fraud | victims)),
         "completed_investigations": len(completed),
+        "cluster_assessment_levels": cluster_levels,
+        "application_assessments_count": len(roles),
+        "applications_not_assessed": unassessed,
+        "application_roles": {role: sum(item["role"] == role for item in roles)
+                              for role in ("suspected_participant", "possible_victim", "no_adverse_evidence", "undetermined")},
+        "suspected_participants_matching_synthetic_fraud": len(suspected & fraud),
+        "suspected_participants_outside_synthetic_fraud": len(suspected - fraud),
+        "synthetic_victims_suspected_as_participants": len(suspected & victims),
+        "possible_victims_matching_synthetic_victims": len(possible_victims & victims),
         "inconclusive_investigations": sum(c["case"]["verdict"] == "inconclusive" for c in completed),
         "inconclusive_rate": sum(c["case"]["verdict"] == "inconclusive" for c in completed) / len(completed) if completed else None,
         "tool_errors": sum(c.get("failed_tool_calls", 0) for c in clusters),

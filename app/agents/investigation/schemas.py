@@ -18,6 +18,38 @@ class Evidence(BaseModel):
     model_config = ConfigDict(extra="forbid")
     claim: Text
     source: str = Field(min_length=1, max_length=128, description="tool_call_id from a successful tool result in this run; not an edge ID")
+    record_ids: list[Annotated[str, StringConstraints(min_length=1, max_length=256)]] = Field(default_factory=list, max_length=20,
+        description="Exact record_id values returned by that source tool, especially for application-level claims")
+
+
+class ClusterAssessment(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    level: Literal["suspicious", "no_pattern_observed", "insufficient_data"]
+    reason: Text
+    evidence: list[Evidence] = Field(min_length=1, max_length=10)
+    limitations: list[Text] = Field(default_factory=list, max_length=10)
+    verification_status: Literal["unverified"] = "unverified"
+
+
+class ApplicationAssessment(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    app_id: AppID
+    role: Literal["suspected_participant", "possible_victim", "no_adverse_evidence", "undetermined"]
+    reason: Text
+    evidence: list[Evidence] = Field(default_factory=list, max_length=10)
+    missing_information: list[Text] = Field(default_factory=list, max_length=10)
+    assessment_status: Literal["assessed", "not_assessed"] = "assessed"
+    verification_status: Literal["unverified"] = "unverified"
+
+    @model_validator(mode="after")
+    def grounded_role(self):
+        if self.assessment_status == "assessed" and not self.evidence:
+            raise ValueError("An assessed application needs application-specific evidence")
+        if self.assessment_status == "not_assessed" and self.role != "undetermined":
+            raise ValueError("An unassessed application must remain undetermined")
+        if self.role == "undetermined" and not self.missing_information:
+            raise ValueError("Explain which application information is missing")
+        return self
 
 
 class TransactionAssessment(BaseModel):
@@ -35,6 +67,8 @@ class CaseSubmission(BaseModel):
     confidence: float = Field(ge=0, le=1, allow_inf_nan=False,
                              description="Model's uncalibrated confidence in this verdict, not probability the borrower is a criminal. No fixed default for inconclusive.")
     summary: Text | None = None
+    cluster_assessment: ClusterAssessment | None = None
+    application_assessments: list[ApplicationAssessment] = Field(default_factory=list, max_length=100)
     missing_information: list[Text] = Field(default_factory=list, max_length=10)
     transaction_assessments: list[TransactionAssessment] = Field(default_factory=list, max_length=50)
     members: list[AppID] = Field(default_factory=list, max_length=100,
