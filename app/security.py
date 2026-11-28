@@ -29,7 +29,7 @@ DEMO_AUTOFILL = os.environ.get("DEMO_AUTOFILL") == "1"
 # Cần đăng nhập: mọi thứ chạm tới dữ liệu hồ sơ. Công khai: Lá chắn (cho khách vay), tổng quan + chỉ số (chỉ số đếm tổng hợp).
 PROTECTED = ("/api/alerts", "/api/apps", "/api/transfer", "/api/live",
              "/api/investigations", "/api/v1/agents", "/api/ai/entities", "/api/ai/triage", "/api/ai/transfer", "/api/ai/pipeline",
-             "/api/sim")
+             "/api/sim", "/api/ai/realtime")
 # App ví khách (/api/khach/*) có đăng nhập RIÊNG (SĐT + PIN) — không dùng phiên đội rủi ro hay key dịch vụ.
 PUBLIC_API = ("/api/login", "/api/logout", "/api/me", "/api/overview", "/api/metrics")
 # (tiền tố, số lượt, trong bao nhiêu giây) — khớp tiền tố đầu tiên

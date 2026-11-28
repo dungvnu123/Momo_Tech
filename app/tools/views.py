@@ -18,6 +18,7 @@ EDGE_FIELDS = {
     "pct_of_loan", "recipient_in_contacts", "prior_transfers_to_recipient",
     "contact_saved_minutes_ago", "simo_flag", "to_is_merchant", "wallet_age_days",
     "ai_generated", "verdict", "confidence", "reporter_is_victim",
+    "status", "loan_id", "loan_amount",
 }
 
 

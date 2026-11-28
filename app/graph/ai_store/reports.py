@@ -1,5 +1,6 @@
 import hashlib
 import json
+from contextlib import nullcontext
 
 from app.ai.shield.indicators import canonical_indicator
 
@@ -8,7 +9,7 @@ from ..normalize import phone
 
 
 class ReportStore:
-    def persist_report(self, report_id, text, analysis):
+    def persist_report(self, report_id, text, analysis, *, transaction=True):
         row = self.connection.execute("SELECT payload FROM scam_reports WHERE id=?", (report_id,)).fetchone()
         if row is None:
             raise KeyError(report_id)
@@ -19,7 +20,7 @@ class ReportStore:
         validate_report(analysis, text)
         payload = {"report_id": report_id, "input_hash": hashlib.sha256(text.encode()).hexdigest(),
                    **analysis.model_dump()}
-        with self.connection:
+        with self.connection if transaction else nullcontext():
             self.connection.execute("INSERT OR REPLACE INTO ai_report_analysis VALUES (?, ?)",
                                     (report_id, json.dumps(payload, ensure_ascii=False)))
             self.connection.execute("DELETE FROM edges WHERE source_table='ai_report_analysis' AND source_id=?", (report_id,))

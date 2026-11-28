@@ -62,8 +62,13 @@ giao dịch bị **tạm giữ** kèm lý do → "Báo lừa đảo" → sang m�
 
 ## Kiểm tra
 
+Luồng AI cho sự kiện mới từ app khách, cập nhật graph và tự điều tra:
+[docs/ai_realtime.md](docs/ai_realtime.md). Trình chiếu ở
+`/flows/#/thienla-ai-realtime`. Worker bật mặc định; có thể tắt bằng
+`AI_REALTIME_ENABLED=0` để xử lý từng sự kiện qua API.
+
 ```bash
-uv run python -m unittest discover -s tests          # 161 test, chạy trên database <tên>_test riêng, tự dọn
+uv run python -m unittest discover -s tests          # 175 test, chạy trên database <tên>_test riêng, tự dọn
 uv run python -X utf8 build.py && python tests/smoke.py .env   # server đang chạy ở :4420 — 62 phép thử API đầu-cuối
 ```
 

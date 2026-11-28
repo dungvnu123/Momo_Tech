@@ -2,6 +2,8 @@ from collections import defaultdict
 from datetime import datetime
 
 from app.graph.normalize import name_match
+from .loans import applications_at
+from .live_transactions import live_transactions
 
 
 def boolean(value):
@@ -21,13 +23,16 @@ def transaction_rows(context, ids=None):
     ids = context.ids if ids is None else ids
     if not ids:
         return []
-    return context.store.q(
+    applications = applications_at(context, ids)
+    original_ids = [a["app_id"] for a in applications if a["loan_id"] is None]
+    historical = context.store.q(
         "SELECT t.*, a.app_id AS application_id, a.amount AS loan_amount, "
         "a.disbursed_at, a.full_name AS applicant_name FROM transfers t "
-        "JOIN apps a ON a.phone=t.from_wallet WHERE a.app_id IN (" + ",".join("?" for _ in ids) + ") "
+        "JOIN apps a ON a.phone=t.from_wallet WHERE a.app_id = ANY(?) "
         "AND a.applied_at <= ? AND t.created_at <= ? ORDER BY t.created_at,t.transfer_id",
-        *ids, context.cutoff, context.cutoff,
+        original_ids, context.cutoff, context.cutoff,
     )
+    return sorted(historical + live_transactions(context, applications), key=lambda r: (r["created_at"], r["transfer_id"]))
 
 
 def transaction_view(context, row, reports):
@@ -40,7 +45,10 @@ def transaction_view(context, row, reports):
     matching_reports = [r for r in reports if node_id in r["matched_recipient_node_ids"] and r["verdict"] in {"scam", "suspicious"}]
     return {
         "transfer_id": row["transfer_id"], "app_id": row["application_id"],
-        "source": {"table": "transfers", "id": row["transfer_id"]},
+        "source": {"table": row.get("source_table", "transfers"), "id": row["transfer_id"]},
+        "record_id": row.get("source_table", "transfers") + ":" + row["transfer_id"],
+        "loan_id": row.get("loan_id"), "status": row.get("status", "done"),
+        "customer_says_coached": row.get("coached", False),
         "amount": int(row["amount"]), "loan_amount": int(row["loan_amount"]),
         "created_at": row["created_at"], "minutes_after_disbursal": round(minutes, 2) if minutes is not None else None,
         "transfer_loan_ratio": round(int(row["amount"]) / max(int(row["loan_amount"]), 1), 4),
@@ -55,7 +63,7 @@ def transaction_view(context, row, reports):
         "reported_recipient_count": len(matching_reports),
         "verified_reported_recipient_count": sum(
             r["annotation_mode"] not in {"mock", "unknown"} and
-            r["recipient_match_basis"].get(node_id) == "wallet_identifier" for r in matching_reports),
+            r["recipient_match_basis"].get(node_id) in {"wallet_identifier", "bank_qualified_identifier"} for r in matching_reports),
         "report_ids": [r["report_id"] for r in matching_reports],
         "report_match_limitation": "Report identifiers have no bank scope; a bank account-number match needs bank verification.",
     }
@@ -66,6 +74,8 @@ def money_flow(context, ids, reports, offset=0, limit=50):
     views = [transaction_view(context, row, reports) for row in rows]
     rapid, senders, loans = defaultdict(int), defaultdict(set), {}
     for row in views:
+        if row["status"] != "done":
+            continue
         loans[row["app_id"]] = row["loan_amount"]
         if row["minutes_after_disbursal"] is not None and 0 <= row["minutes_after_disbursal"] <= 120 and row["recipient_name_matches_applicant"] is False:
             rapid[row["app_id"]] += row["amount"]

@@ -21,6 +21,12 @@ ROOT = Path(__file__).resolve().parents[2]
 
 def mount_backend(app, database):
     tools = Tools(database)
+    from .events import ensure_schema
+    from app.ai.realtime import RealtimeService
+    enabled = ensure_schema(tools)
+    realtime = RealtimeService(database, app.state.investigation_agent.database,
+                              app.state.ai_service, app.state.tool_llm_client) if enabled else None
+    app.state.realtime_service = realtime
     app.state.backend_tools = tools
     adapter = BackendAI(app.state.ai_service, app.state.tool_llm_client, tools)
     metadata = {r["k"]: json.loads(r["v"]) for r in tools.q("SELECT k, v FROM meta")}
@@ -30,8 +36,12 @@ def mount_backend(app, database):
     async def lifespan(application):
         try:
             async with previous_lifespan(application) as state:
+                if realtime and os.environ.get("AI_REALTIME_ENABLED", "1") == "1":
+                    realtime.start()
                 yield state
         finally:
+            if realtime:
+                await realtime.close()
             tools.db.close()
 
     app.router.lifespan_context = lifespan

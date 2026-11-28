@@ -120,6 +120,10 @@ Cửa sổ dữ liệu **01/06 → 25/11/2026**. **Không có cột "quá hạn"
 
 ## 5. Những chỗ AI làm việc (`app/ai/`, `app/agents/investigation/`)
 
+Luồng trực tiếp từ app khách nay có outbox PostgreSQL, cập nhật graph theo
+sự kiện, sàng lọc và tự gọi Agent. Tool đọc được khoản vay KL/giao dịch KT,
+tách held khỏi tiền đã chuyển. Chi tiết và giới hạn: [ai_realtime.md](ai_realtime.md).
+
 Các API tương tác dùng Gemini qua `LLM_API_KEY`/`LLM_MODEL_NAME` và **tool schema**.
 `backend/integration.py` đổi hợp đồng web sang AIService và InvestigationAgent. Engine/build
 vẫn dùng `backend/mock_ai.py` để dựng mẫu offline; chưa tự gọi AI entity resolution/triage
@@ -144,9 +148,9 @@ phần chưa đánh giá. Mọi vai trò đều chưa xác minh. Xem
 **Kho tri thức và việc “học”:** graph lưu dấu vết từ tin báo (tài khoản, số
 điện thoại, URL/tên miền), quan hệ giao dịch và nhận định có nguồn. Bổ sung
 dữ liệu giúp truy vấn có thêm ngữ cảnh; hiện không có huấn luyện/fine-tune
-model tự động hay vòng học online từ toàn bộ giao dịch. API Lá chắn trả phân
-tích; pipeline mới kiểm tra nguồn rồi ghi graph. Luồng tự ghi mọi tin người
-dùng vừa gửi vào kho chung chưa được nối đầy đủ. Chi tiết:
+model tự động hay vòng học online từ toàn bộ giao dịch. API Lá chắn độc lập
+trả phân tích; tin được báo từ hộp thư app khách đã nối qua outbox để kiểm
+tra nguồn rồi ghi graph. Không tự thu mọi nội dung người dùng chỉ đem phân tích. Chi tiết:
 [tích hợp dữ liệu và graph](ai_pipeline.md#tích-hợp-dữ-liệu-và-graph).
 
 **Hợp nhất thực thể mờ** (C: "Ng V. A" = "Nguyễn Văn A") là việc AI nên làm thêm — hiện C mất **27 ngày** mới bị cảnh báo vì phải đủ 5 hồ sơ chung thiết bị.
@@ -270,8 +274,8 @@ thien-la/
 ├── gen_data.py · build.py · docker-compose.yml · Dockerfile · .env.example
 ├── app/  main.py · engine.py · db.py · security.py · khach.py (app ví) · sim.py (mô phỏng) · middleware/ · backend/ · ai/ · agents/ · graph/ · tools/
 ├── web/  index.html · app.js · style.css (đội rủi ro)  ·  vi/ index.html · vi.js · vi.css (app khách)
-├── flows/build_flows.py · flows/backend_agent.py · flows/batch_ai.py → docs/flows/*.json  (11 luồng trình chiếu)
-├── tests/  161 test đơn vị (unittest) · smoke.py (62 phép thử API đầu-cuối)
+├── flows/build_flows.py · flows/backend_agent.py · flows/batch_ai.py · flows/realtime_ai.py → docs/flows/*.json  (12 luồng trình chiếu)
+├── tests/  175 test (unittest) · smoke.py (62 phép thử API đầu-cuối)
 └── docs/ system_design.md · huong_dan_su_dung.md · Thien_La_gioi_thieu.docx · hdsd/ · tools/
 ```
 

@@ -8,12 +8,16 @@ import json
 import os
 import time
 from datetime import datetime
+from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
 from . import security
 from .backend import mock_ai as ai
+from .backend.events import wallet as writes
+from .backend.events.knowledge import related_case_count, recipient_reports
+from .graph.normalize import account as recipient_identity
 
 router = APIRouter(prefix="/api/khach")
 tools = None     # backend.store.Tools — gán từ backend/routes.py (dùng chung kết nối)
@@ -40,12 +44,13 @@ def inbox_add(phone, sender, body, kind):
 def live_alert(kind, app_id, title, reason, severity, confidence, signals, n_reports=0, transfer_id=None):
     """Cảnh báo phát sinh trực tiếp từ app khách → hiện ngay trên hàng đợi đội rủi ro."""
     ts = now_iso()
-    n = tools.q("SELECT COUNT(*) AS n FROM alerts WHERE alert_id LIKE 'LV%'")[0]["n"] + 1
+    alert_id = "LV" + uuid4().hex
     prio = round({"khan": 3, "cao": 2, "tb": 1}[severity] * 10 + confidence * 10 + 1, 2)
     tools.run("INSERT INTO alerts (alert_id, ts, day, kind, cid, transfer_id, title, reason, severity, priority, confidence, size, n_pending, "
               "n_reports, suspected_type, signals, app_ids, latest, verdict, case_conf) VALUES (?,?,?,?,NULL,?,?,?,?,?,?,1,0,?,?,?,?,TRUE,NULL,NULL)",
-              f"LV{n:05d}", ts, ts[:10], kind, transfer_id, title, reason, severity, prio, confidence, n_reports, kind,
+              alert_id, ts, ts[:10], kind, transfer_id, title, reason, severity, prio, confidence, n_reports, kind,
               json.dumps(signals), json.dumps([app_id]))
+    return alert_id
 
 
 # ── đăng nhập ───────────────────────────────────────────────────────────────────────
@@ -80,9 +85,9 @@ def logout(response: Response):
 
 
 def current_loan(acc):
-    live = tools.q("SELECT amount, disbursed_at FROM khach_loans WHERE phone=? ORDER BY loan_id DESC LIMIT 1", acc["phone"])
+    live = tools.q("SELECT loan_id, amount, disbursed_at FROM khach_loans WHERE phone=? ORDER BY loan_id DESC LIMIT 1", acc["phone"])
     if live:
-        return {"amount": live[0]["amount"], "disbursed_at": live[0]["disbursed_at"], "live": True}
+        return {**live[0], "live": True}
     a = tools.apps([acc["app_id"]])[0]
     return {"amount": int(a["amount"]), "disbursed_at": a["disbursed_at"], "live": False}
 
@@ -136,6 +141,12 @@ async def ai_transfer(ctx: dict) -> dict:
     """Gemini quyết định chính; luật chỉ được NÂNG mức (allow < warn < hold), không bao giờ hạ — vì đầu vào của AI
     chưa có nội dung chuyển khoản/số dư (giả thu nợ, phần lớn số dư). Chưa cấu hình/AI lỗi → luật giả lập."""
     rule = ai.check_transfer(ctx)
+    if ctx.get("unverified_case_count") and rule["decision"] == "allow":
+        rule = {**rule,"decision":"warn","reasons":rule["reasons"]+["Người nhận có liên kết tới vụ việc AI đang nghi vấn, chưa được xác minh."],
+                "message_for_customer":"Hãy xác minh người nhận trước khi tiếp tục; liên kết vụ việc chưa chứng minh lừa đảo."}
+    if ctx.get("unscoped_report_count") and rule["decision"] == "allow":
+        rule={**rule,"decision":"warn","reasons":["Có tin báo cùng dãy số nhưng chưa xác định đúng ngân hàng/loại người nhận."],
+              "message_for_customer":"Cần xác minh người nhận; chưa đủ thông tin để kết luận tin báo nói về tài khoản này."}
     if rule["decision"] == "allow" and not ctx.get("ring_case") and not ctx.get("simo_flag") and not ctx.get("times_reported")             and (ctx["prior_transfers_to_recipient"] or ctx["amount"] < 0.3 * max(ctx.get("balance") or 0, 1)):
         return {**rule, "mode": "đường nhanh (không cần AI)"}   # người nhận quen / khoản nhỏ, không tín hiệu → khỏi gọi AI
     if adapter is None or not ai_ready():
@@ -161,16 +172,13 @@ async def report_msg(msg_id: int, request: Request):
     res = await ai_report(rows[0]["body"], rows[0]["kind"] == "official")
     ind = res["indicators"]
     seen_before = times_reported(ind["accounts"] + ind["phones"])
-    rid = f"TBL{tools.q('SELECT COUNT(*) AS n FROM reports')[0]['n'] + 1:05d}"
-    tools.run("INSERT INTO reports VALUES (?,?,?,?,?,?)", rid, now_iso(), acc["phone"], "App FinVay", rows[0]["body"],
-              json.dumps(res, ensure_ascii=False))
-    tools.run("UPDATE khach_inbox SET reported_verdict=?, is_read=TRUE WHERE msg_id=?", res["verdict"], msg_id)
-    if res["verdict"] != "safe":
+    def notify():
         acc_txt = ", ".join(ind["accounts"] + ind["phones"] + ind["urls"]) or "—"
-        live_alert("report", acc["app_id"], f"Khách báo lừa đảo qua app — tài khoản {acc_txt}" + (f" (đã bị báo {seen_before} lần)" if seen_before else ""),
+        return live_alert("report", acc["app_id"], f"Khách báo lừa đảo qua app — tài khoản {acc_txt}" + (f" (đã bị báo {seen_before} lần)" if seen_before else ""),
                    "; ".join(res["reasons"]), "khan" if seen_before else "cao", 0.85 if seen_before else 0.6,
                    ["user_report"], n_reports=seen_before + 1)
-    return {**res, "times_reported": seen_before}
+    saved = writes.report(tools, acc, msg_id, rows[0]["body"], res, now_iso(), notify)
+    return {**saved, "times_reported": seen_before}
 
 
 def times_reported(ids):
@@ -187,11 +195,10 @@ class LoanIn(BaseModel):
 def take_loan(body: LoanIn, request: Request):
     acc = me(request)
     ts = now_iso()
-    tools.run("INSERT INTO khach_loans (phone, amount, disbursed_at) VALUES (?,?,?)", acc["phone"], body.amount, ts)
-    tools.run("UPDATE khach_accounts SET balance = balance + ? WHERE phone=?", body.amount, acc["phone"])
+    loan_id = writes.loan(tools, acc, body.amount, ts)
     inbox_add(acc["phone"], "FinVay", f"[FinVay] Khoan vay {body.amount:,}d da giai ngan ve vi luc {ts[11:16]}. "
               "FinVay KHONG thu phi giai ngan hay phi xac minh.".replace(",", "."), "official")
-    return {"ok": True}
+    return {"ok": True, "loan_id": loan_id}
 
 
 # ── chuyển tiền ─────────────────────────────────────────────────────────────────────
@@ -208,18 +215,31 @@ class TransferIn(BaseModel):
 
 
 @router.get("/lookup")
-def lookup(to_id: str, request: Request):
+def lookup(to_id: str, request: Request, to_type: str = "bank", to_bank: str = ""):
     """Tra cứu người nhận TRƯỚC khi chuyển. Chỉ trả nhãn mức độ — không lộ mã vụ/số hồ sơ đang điều tra."""
     me(request)
     to_id = ai.norm_number(to_id)
     if not to_id.isdigit() or not 8 <= len(to_id) <= 19:
         raise HTTPException(422, "Số tài khoản/ví chỉ gồm 8–19 chữ số")
     n = times_reported([to_id])
+    unscoped=n
+    related = 0
+    if to_bank or to_type == "momo_wallet":
+        try:
+            related = related_case_count(tools,to_type,to_bank,to_id)
+            n,unscoped=recipient_reports(tools,to_type,to_bank,to_id,now_iso())
+        except ValueError:
+            raise HTTPException(422,"Cần đúng loại người nhận và mã ngân hàng") from None
     labels = [text for on, text in (
         (tools.q("SELECT 1 FROM ring_accounts WHERE to_id=?", to_id), "Liên quan tới đường dây gian lận đang được điều tra"),
         (tools.q("SELECT 1 FROM simo_list WHERE to_id=?", to_id), "Nằm trong danh sách nghi gian lận của hệ thống SIMO (NHNN)"),
-        (n, f"Đã bị {n} người báo lừa đảo")) if on]
-    return {"risky": bool(labels), "labels": labels}
+        (n, f"Có {n} tin báo liên quan người nhận")) if on]
+    if related:
+        labels.append("Có liên kết tới vụ việc AI đề nghị kiểm tra; chưa xác minh là lừa đảo")
+    if (to_bank or to_type == "momo_wallet") and unscoped:
+        labels.append("Có tin báo cùng dãy số nhưng chưa xác định đúng ngân hàng/loại người nhận")
+    return {"risky": bool(labels), "labels": labels,"unverified_case_count":related,
+            "exact_report_count":n if to_bank or to_type=="momo_wallet" else 0,"unscoped_report_count":unscoped}
 
 
 @router.post("/transfer")
@@ -246,22 +266,31 @@ def build_ctx(acc: dict, body: TransferIn) -> dict:
     to_id = ai.norm_number(body.to_id)
     if not to_id.isdigit():
         raise HTTPException(422, "Số tài khoản/ví chỉ gồm chữ số")
+    try:
+        recipient_identity(body.to_type,body.to_bank,to_id)
+        if not 8 <= len(to_id) <= 19:
+            raise ValueError("Invalid length")
+    except ValueError:
+        raise HTTPException(422,"Cần đúng số tài khoản/ví, loại người nhận và mã ngân hàng") from None
     if body.save_contact:
         tools.run("INSERT INTO khach_contacts VALUES (?,?,?,?) ON CONFLICT (phone, contact_phone) DO NOTHING",
                   acc["phone"], to_id, body.to_name, now_iso())
     loan, now = current_loan(acc), security.vntime_now()
+    exact_reports,unscoped_reports=recipient_reports(tools,body.to_type,body.to_bank,to_id,now.isoformat(timespec="seconds"))
     contact = tools.q("SELECT saved_at FROM khach_contacts WHERE phone=? AND contact_phone=?", acc["phone"], to_id)
     prior = tools.q("SELECT COUNT(*) AS n FROM khach_transfers WHERE phone=? AND to_id=? AND status='done'", acc["phone"], to_id)[0]["n"]
     prior += tools.q("SELECT COUNT(*) AS n FROM transfers WHERE from_wallet=? AND to_id=?", acc["phone"], to_id)[0]["n"]
     ctx = {"amount": body.amount, "loan_amount": loan["amount"],
+           "loan_id": loan.get("loan_id"),
            "minutes_after_disbursal": round((now - datetime.fromisoformat(loan["disbursed_at"])).total_seconds() / 60),
            "to_name_matches_borrower": ai.plain(body.to_name).upper() == ai.plain(acc["display_name"]).upper(),
            "recipient_in_contacts": bool(contact),
            "contact_saved_minutes_ago": round((now - datetime.fromisoformat(contact[0]["saved_at"])).total_seconds() / 60) if contact else None,
            "prior_transfers_to_recipient": prior,
            "simo_flag": bool(tools.q("SELECT 1 FROM simo_list WHERE to_id=?", to_id)),
-           "to_wallet_age_days": None, "note": body.note, "times_reported": times_reported([to_id]), "balance": acc.get("balance"),
+           "to_wallet_age_days": None, "note": body.note, "times_reported": exact_reports, "unscoped_report_count":unscoped_reports,"balance": acc.get("balance"),
            "to_id": to_id, "coached": body.coached,
+           "unverified_case_count": related_case_count(tools,body.to_type,body.to_bank,to_id),
            "ring_case": (tools.q("SELECT cid, verdict, n_senders FROM ring_accounts WHERE to_id=? ORDER BY n_senders DESC LIMIT 1", to_id)
                          or [None])[0]}
     return ctx
@@ -278,20 +307,14 @@ def commit_transfer(acc: dict, body: TransferIn, ctx: dict, chk: dict, source: s
     chk = {**chk, "risk_score": ai.risk_score(chk["decision"], chk["reasons"])}
     if chk["decision"] == "warn" and not body.confirm:
         return {**chk, "needs_confirm": True, "context": ctx}
-    status = "held" if chk["decision"] == "hold" else "done"
-    tx = tools.q("INSERT INTO khach_transfers (phone, ts, to_type, to_id, to_bank, to_name, amount, note, decision, reasons, status) "
-                 "VALUES (?,?,?,?,?,?,?,?,?,?,?) RETURNING tx_id", acc["phone"], now_iso(), body.to_type, to_id, body.to_bank,
-                 body.to_name, body.amount, body.note, chk["decision"], json.dumps(chk["reasons"], ensure_ascii=False), status)[0]["tx_id"]
-    if status == "done":
-        tools.run("UPDATE khach_accounts SET balance = balance - ? WHERE phone=?", body.amount, acc["phone"])
-    else:
+    def notify(transfer_id):
         inbox_add(acc["phone"], "FinVay", "[FinVay] Giao dich chuyen tien cua Quy khach dang duoc TAM GIU de bao ve Quy khach. "
                   "Neu co nguoi huong dan Quy khach vay roi chuyen tien, do la lua dao. Lien he tong dai chinh thuc trong ung dung.", "official")
         where = "trực tiếp từ app" if source == "app" else "(mô phỏng)"
-        live_alert("transfer", acc["app_id"], f"Tạm giữ giao dịch {body.amount:,} đ {where} — {chk['reasons'][0] if chk['reasons'] else ''}".replace(",", "."),
+        return live_alert("transfer", acc["app_id"], f"Tạm giữ giao dịch {body.amount:,} đ {where} — {chk['reasons'][0] if chk['reasons'] else ''}".replace(",", "."),
                    "; ".join(chk["reasons"]), "khan", 0.9 if ctx["ring_case"] else 0.8 if (ctx["simo_flag"] or ctx["times_reported"]) else 0.65,
-                   ["shared_recipient"] if ctx["ring_case"] else ["simo"] if ctx["simo_flag"] else ["fast_out_stranger"], n_reports=ctx["times_reported"], transfer_id=f"KT{tx}")
-    return {**chk, "status": status, "context": ctx}
+                   ["shared_recipient"] if ctx["ring_case"] else ["simo"] if ctx["simo_flag"] else ["fast_out_stranger"], n_reports=ctx["times_reported"], transfer_id=transfer_id)
+    return writes.transfer(tools, acc, body, ctx, chk, source, now_iso(), notify)
 
 
 @router.get("/transfers")

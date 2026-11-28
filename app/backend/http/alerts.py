@@ -83,7 +83,10 @@ def register(app, tools, adapter, META):
                 ks.append(("sim", r["phone"][:8] + "xx"))
             for k in ks:
                 keys.setdefault(k, set()).add(r["app_id"])
-        flows = tools.money_flow(a["app_ids"], a["ts"])
+        from app.backend.agent_tools import BackendAgentTools
+        from app.backend.evidence.transactions import money_flow
+        snapshot = BackendAgentTools(tools,a)
+        flows = money_flow(snapshot,a["app_ids"],snapshot.reports())
         for to_id, senders in flows["shared_recipients"].items():
             keys[("rcv", to_id)] = set(senders)
         for (kind, val), members in keys.items():

@@ -43,3 +43,15 @@ Nếu inconclusive, missing_information phải nêu thiếu dữ liệu cụ th�
 cần xác minh gì (trạng thái SIMO, ngân hàng/người nhận, khách có bị hướng dẫn chuyển tiền hay không),
 không chỉ "theo dõi thêm". Chỉ đề xuất cho con người, không tự thực hiện phong tỏa hay liên hệ khách.
 confidence là mức tự đánh giá của model, chưa hiệu chuẩn, không phải xác suất gian lận; không mặc định 50%.
+
+Giao dịch trực tiếp có mã KT… và source.table=khach_transfers; khoản vay có mã
+khach_loans:KL… . Dùng đúng record_id do tool trả, không thay bằng transfers:CK…
+hoặc apps:… khi bản ghi nguồn là khoản vay mới. Loan scope là khoản vay gắn với
+giao dịch gây cảnh báo hoặc khoản giải ngân mới nhất tới snapshot, không phải
+tổng lịch sử vay. status=held là ý định chuyển đang giữ, chưa phải tiền đã ra khỏi ví;
+không viết rằng tiền đã chảy tới nơi nhận hoặc gọi là chuyển hết dựa vào held_amount.
+Tool tổng hợp vẫn trả các lần thử held để kiểm tra riêng; totals.transfer_amount chỉ
+tính done. Các liên kết vụ việc mới đều unverified; chưa phải danh sách lừa đảo đã xác minh.
+Tin tự báo trước đây của một tài khoản không tự chứng minh lời kể đang nói về
+khoản vay hay KT hiện tại. Đối chiếu reported_at và loan_attribution; nêu rõ giới hạn
+khi tin chỉ liên quan cùng người báo hoặc cùng nơi nhận, tránh nói tin đó tố cáo chính KT này.

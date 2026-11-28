@@ -2,6 +2,8 @@
 """Tool trên PostgreSQL (schema public) — agent Thám tử (giả lập hay Gemini) đều gọi qua đây.
 Mọi CCCD/SĐT trả ra đều đã che bớt (mask)."""
 import json
+import threading
+from contextlib import contextmanager
 from collections import defaultdict
 from datetime import datetime
 
@@ -19,14 +21,22 @@ class Tools:
     def __init__(self, database="thienla.db"):
         # database: đường dẫn kiểu cũ (→ schema public) hoặc 1 db.Conn có sẵn. Tự commit: mỗi lệnh ghi là 1 giao dịch.
         self.db = database if isinstance(database, db.Conn) else db.connect(database, autocommit=True)
+        self.lock = threading.RLock()
 
     def q(self, sql, *p):
         """Trả list[dict] (dict thật — FastAPI trả JSON đúng dạng object)."""
-        return [dict(r) for r in self.db.execute(sql, p).fetchall()]
+        with self.lock:
+            return [dict(r) for r in self.db.execute(sql, p).fetchall()]
 
     def run(self, sql, *p):
         """Ghi (chỉ dùng cho phần app khách + cảnh báo trực tiếp; tool của agent vẫn chỉ đọc)."""
-        return self.db.execute(sql, p)
+        with self.lock:
+            return self.db.execute(sql, p)
+
+    @contextmanager
+    def transaction(self):
+        with self.lock, self.db.raw.transaction():
+            yield self
 
     def apps(self, ids):
         return self.q("SELECT * FROM apps WHERE app_id = ANY(?)", list(ids)) if ids else []
@@ -37,6 +47,7 @@ class Tools:
         if not rows:
             return None
         a = rows[0]
+        a["context"] = json.loads(a.get("context") or "{}")
         a["app_ids"], a["signals_on"] = json.loads(a["app_ids"]), json.loads(a["signals"])
         a["signals"] = {k: True for k in a["signals_on"]}
         a["wallets"] = [r["phone"] for r in self.apps(a["app_ids"])]
@@ -104,6 +115,13 @@ class Tools:
             ev.append((r["paid_at"], "repay", f"Trả kỳ {k}", f"{int(r['amount']):,} đ · {r['channel']}".replace(",", ".")))
         for r in self.q("SELECT report_id, reported_at, raw_text FROM reports WHERE reporter_phone=?", a["phone"]):
             ev.append((r["reported_at"], "report", "Khách gửi tin báo lừa đảo", r["raw_text"][:120]))
+        if db.has_table(self.db,"khach_loans"):
+            for loan in self.q("SELECT loan_id,amount,disbursed_at FROM khach_loans WHERE phone=? AND disbursed_at<=?",a["phone"],cut):
+                ev.append((loan["disbursed_at"],"disburse",f"Giải ngân khoản vay KL{loan['loan_id']}",f"{int(loan['amount']):,} đ"))
+        if db.has_table(self.db,"khach_transfers"):
+            for tx in self.q("SELECT tx_id,ts,amount,to_bank,to_id,status FROM khach_transfers WHERE phone=? AND ts<=?",a["phone"],cut):
+                label="Đang tạm giữ, chưa chuyển" if tx["status"]=="held" else "Đã chuyển"
+                ev.append((tx["ts"],"transfer",f"KT{tx['tx_id']} · {label}",f"{int(tx['amount']):,} đ · {tx['to_bank']} {mask(tx['to_id'])}"))
         # gộp theo cụm: lần cảnh báo ĐẦU (tới as_of) + số lần cập nhật sau đó — tránh ngập dòng thời gian
         als = self.q("SELECT alert_id, ts, title, cid FROM alerts WHERE app_ids LIKE ? AND ts <= ? ORDER BY ts", f'%"{app_id}"%', cut)
         seen = {}

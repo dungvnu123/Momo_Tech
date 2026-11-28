@@ -129,7 +129,7 @@ async function sendTx(body) {
 $("#tx-look").onclick = async () => {
   const box = $("#tx-look-r");
   try {
-    const r = await api("lookup?to_id=" + encodeURIComponent(digits($("#tx-id").value)));
+    const r = await api("lookup?to_id=" + encodeURIComponent(digits($("#tx-id").value)) + "&to_type=" + encodeURIComponent(document.querySelector("[name=to_type]:checked").value) + "&to_bank=" + encodeURIComponent($("#tx-bank").value.trim()));
     box.innerHTML = r.risky ? `<div class="verdict v-hold"><b>Cảnh báo người nhận</b><ul class="reasons">${r.labels.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div>`
                             : `<p class="score">Chưa có dữ liệu xấu về người nhận này — vẫn cần chắc chắn bạn biết họ.</p>`;
   } catch (err) { box.textContent = err.message; }
