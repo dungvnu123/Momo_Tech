@@ -13,10 +13,12 @@ def cluster_money_flow(store, request, views):
         ids = [_app_id(value) for value in request.app_ids]
     applications, transfers, recipients = [], [], set()
     for app_id in ids:
-        app = store.application(app_id)
+        app = store.latest_application_loan(app_id)
         applications.append({"app_id": app_id, "amount": app["amount"], "record_id": "applications:" + app_id})
         for edge in store.application_transfers(app_id):
             attrs = edge["attributes"]
+            if attrs.get("loan_id") != app["loan_id"]:
+                continue
             recipient = views.public_id(edge["target"])
             recipients.add(edge["target"])
             transfers.append({"transfer_id": edge["source_id"], "record_id": "wallet_transfers:" + edge["source_id"],
@@ -55,4 +57,4 @@ def cluster_money_flow(store, request, views):
                 "annotation_mode": "ai", "matched_recipient_node_ids": []}
     return summarize_money(applications, transfers, list(report_map.values()), cluster_id=request.cluster_id,
                            limit=request.limit, offset=request.offset,
-                           coverage={"time_scope": "graph_snapshot", "report_analysis": store.report_coverage()})
+                           coverage={"time_scope": "graph_snapshot", "loan_scope":"Latest known disbursement per application; completed transfers only", "report_analysis": store.report_coverage()})

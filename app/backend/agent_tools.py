@@ -6,6 +6,8 @@ from .evidence.reports import report_views
 from .evidence.transactions import money_flow, transaction_rows, transaction_view
 from .evidence.validation import validate_case
 from .evidence.cluster_money import cluster_money_flow
+from .evidence.loans import application_at
+from .evidence.senders import account_senders
 
 
 class Arguments(BaseModel):
@@ -40,8 +42,15 @@ class BackendAgentTools:
     }
 
     def __init__(self, store, alert):
-        self.store, self.alert = store, alert
+        self.store, self.alert = store, {**alert, "context": dict(alert.get("context") or {})}
         self.cutoff = alert["ts"]
+        from app import db
+        focused = alert.get("transfer_id") or ""
+        if focused.startswith("KT") and focused[2:].isdigit() and db.has_table(store.db, "khach_transfers"):
+            rows = store.q("SELECT t.loan_id,a.app_id FROM khach_transfers t JOIN apps a ON a.phone=t.phone "
+                           "WHERE t.tx_id=? AND t.ts<=?", int(focused[2:]), self.cutoff)
+            if rows:
+                self.alert["context"]["loan_ids"] = {**self.alert["context"].get("loan_ids", {}), rows[0]["app_id"]: rows[0]["loan_id"]}
         self.ids = [r["app_id"] for r in store.apps(alert["app_ids"])
                     if r["applied_at"] <= self.cutoff]
         self.tokens = {}
@@ -99,12 +108,13 @@ class BackendAgentTools:
                         "size": len(self.ids), "signals": self.alert["signals"],
                         "alert_kind": self.alert.get("kind"), "alert_id": self.alert["alert_id"],
                         "triggering_transfer_id": self.alert.get("transfer_id"),
-                        "as_of": self.cutoff, "truncated": len(self.ids) > 100}
+                        "as_of": self.cutoff, "truncated": len(self.ids) > 100 or self.alert.get("context",{}).get("scope_truncated",False)}
             elif name == "get_application":
-                row = self.store.apps([args.app_id])[0]
+                row = application_at(self, self.store.apps([args.app_id])[0])
                 fields = ("app_id", "amount", "applied_at", "ip_type", "sim_age_days", "fill_time_sec",
                           "is_emulator", "is_rooted_or_hooked", "device_first_seen_hours")
                 data = {"application": {k: row[k] for k in fields},
+                        "loan": {k: row[k] for k in ("loan_id", "loan_record_id", "amount", "disbursed_at")},
                         "victim_self_report_count": sum(r["reporter_is_victim"] and args.app_id in r["reporter_app_ids"]
                                                         for r in self.reports())}
             elif name == "tech_profile":
@@ -122,11 +132,7 @@ class BackendAgentTools:
                         "coverage": "Stored report assessments; annotation_mode identifies simulated annotations."}
             elif name == "account_senders":
                 kind, bank, account = next(k for k, v in self.tokens.items() if v == args.node_id)
-                rows = self.store.q("SELECT a.app_id, t.created_at, t.amount FROM transfers t "
-                                    "JOIN apps a ON a.phone=t.from_wallet WHERE t.to_id=? "
-                                    "AND t.to_type=? AND (?='' OR UPPER(t.to_bank)=?) "
-                                    "AND t.created_at <= ? AND a.applied_at <= ? ORDER BY t.created_at,t.transfer_id LIMIT ? OFFSET ?",
-                                    account, kind, bank, bank, self.cutoff, self.cutoff, args.limit + 1, args.offset)
+                rows = account_senders(self,kind,bank,account,args.limit,args.offset)
                 discovered = {r["app_id"] for r in rows[:args.limit]}
                 self.readable_ids.update(sorted(discovered - self.readable_ids)[:max(0, 100 - len(self.readable_ids))])
                 data = {"senders": rows[:args.limit], "app_ids": sorted(discovered),
@@ -139,6 +145,8 @@ class BackendAgentTools:
                 data = {"app_id": args.app_id, "dpd": timeline["dpd"],
                         "events": [{"ts": e["ts"], "type": e["type"]} for e in events[:50]],
                         "truncated": len(events) > 50}
+                data["live_transfers"] = [transaction_view(self, t, self.reports()) for t in transaction_rows(self, [args.app_id])
+                                          if t.get("source_table") == "khach_transfers"][:50]
             # Include scoped victim evidence with every read so an offender
             # submission cannot bypass attribution by skipping the report tool.
             data.setdefault("reports", [r for r in self.reports() if r["reporter_is_victim"]][:50])

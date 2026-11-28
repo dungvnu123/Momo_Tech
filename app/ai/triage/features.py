@@ -10,7 +10,7 @@ from .schemas import ClusterSummary
 def cluster_summary(store, cluster_id, app_ids):
     if not 1 <= len(app_ids) <= 100 or len(set(app_ids)) != len(app_ids):
         raise ValueError("Expected 1..100 distinct application IDs")
-    rows = [store.application(identifier) for identifier in app_ids]
+    rows = [store.latest_application_loan(identifier) for identifier in app_ids]
     rapid = stranger = self_reports = 0
     devices, recipients, reported = Counter(), defaultdict(set), set()
     references, identities = defaultdict(set), defaultdict(set)
@@ -28,6 +28,8 @@ def cluster_summary(store, cluster_id, app_ids):
         total = other = 0
         for edge in store.application_transfers(row["app_id"]):
             values = edge["attributes"]
+            if values.get("loan_id") != row["loan_id"]:
+                continue
             if values["minutes_after_disbursal"] <= 120:
                 total += values["amount"]
                 if name_match(row.get("full_name", ""), values.get("to_name", "")) is False:

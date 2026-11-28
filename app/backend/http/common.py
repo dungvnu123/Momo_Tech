@@ -7,9 +7,10 @@ def times_reported(tools, ids, as_of="9999"):
     ids = sorted({x for x in ids if x})
     if not ids:
         return 0
-    return tools.db.raw.execute(
-        "SELECT COUNT(*) FROM reports WHERE reported_at <= %s AND ((analysis::jsonb->'indicators'->'accounts') ?| %s "
-        "OR (analysis::jsonb->'indicators'->'phones') ?| %s)", (as_of, ids, ids)).fetchone()[0]
+    with tools.lock:
+        return tools.db.raw.execute(
+            "SELECT COUNT(*) FROM reports WHERE reported_at <= %s AND ((analysis::jsonb->'indicators'->'accounts') ?| %s "
+            "OR (analysis::jsonb->'indicators'->'phones') ?| %s)", (as_of, ids, ids)).fetchone()[0]
 
 
 def alert_row(r):

@@ -14,6 +14,7 @@ def summarize_money(applications, transfers, reports, *, cluster_id=None, limit=
             "transfer_count": 0, "total_amount": 0, "rapid_stranger_amount": 0,
             "same_name_amount": 0, "unknown_name_amount": 0, "simo_transfer_count": 0,
             "transfer_ids": [], "report_ids": [], "victim_self_report_count": 0,
+            "held_transfer_count": 0, "held_amount": 0,
         }
     rows = sorted(transfers, key=lambda t: (t.get("created_at") or "", t["transfer_id"]))
     if len({row["transfer_id"] for row in rows}) != len(rows):
@@ -22,6 +23,10 @@ def summarize_money(applications, transfers, reports, *, cluster_id=None, limit=
     for row in rows:
         app = apps[row["app_id"]]
         amount = int(row["amount"])
+        if row.get("status", "done") != "done":
+            app["held_transfer_count"] += 1
+            app["held_amount"] += amount
+            continue
         app["transfer_count"] += 1
         app["total_amount"] += amount
         app["transfer_ids"].append(row["transfer_id"])
@@ -74,7 +79,9 @@ def summarize_money(applications, transfers, reports, *, cluster_id=None, limit=
     return {
         "cluster_id": cluster_id, "app_ids": list(apps), "application_count": len(apps),
         "totals": {"loan_amount": sum(a["loan_amount"] for a in apps.values()),
-                   "transfer_count": len(rows), "transfer_amount": sum(a["total_amount"] for a in apps.values()),
+                   "transfer_count": sum(a["transfer_count"] for a in apps.values()), "transfer_amount": sum(a["total_amount"] for a in apps.values()),
+                   "held_transfer_count": sum(a["held_transfer_count"] for a in apps.values()),
+                   "held_amount": sum(a["held_amount"] for a in apps.values()),
                    "rapid_stranger_applications": sum(a["loan_amount"] > 0 and a["rapid_stranger_amount"] * 5 >= 4 * a["loan_amount"] for a in apps.values()),
                    "shared_recipient_count": sum(len(r["sender_app_ids"]) > 1 for r in recipients.values()),
                    "simo_transfer_count": sum(a["simo_transfer_count"] for a in apps.values())},

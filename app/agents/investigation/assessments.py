@@ -6,9 +6,11 @@ def observed_records(data):
     records = {}
     for row in data.get("application_summaries", []):
         records[row["record_id"]] = {row["app_id"]}
-    for row in data.get("transfers", []):
+    for row in data.get("transfers", []) + ([data["transfer"]] if data.get("transfer") else []):
         if row.get("record_id") and row.get("app_id"):
             records[row["record_id"]] = {row["app_id"]}
+    if data.get("loan", {}).get("loan_record_id") and data.get("application", {}).get("app_id"):
+        records[data["loan"]["loan_record_id"]] = {data["application"]["app_id"]}
     for row in data.get("reports", []):
         if row.get("record_id"):
             records[row["record_id"]] = set(row.get("related_app_ids", row.get("reporter_app_ids", [])))
@@ -51,7 +53,7 @@ def validate_assessments(case, steps, scope, *, required=False):
             data = step.result["data"]
             report_coverage = data.get("coverage", {}).get("report_analysis")
             incomplete |= bool(data.get("truncated") or data.get("recipients_truncated")
-                               or data.get("coverage", {}).get("report_evidence_truncated"))
+                               or data.get("coverage", {}).get("report_evidence_truncated") or data.get("coverage",{}).get("cohort_truncated"))
             incomplete |= not isinstance(report_coverage, dict) or report_coverage.get("complete") is False
         if incomplete:
             if not case.cluster_assessment.limitations:

@@ -21,6 +21,8 @@ class TransferCheck(Contract):
     recipient_ring_senders: int = Field(default=0, ge=0)   # số hồ sơ vay trong 1 vụ đường dây ĐÃ điều tra từng chuyển cho người nhận này
     share_of_balance: float | None = Field(default=None, ge=0, le=1, allow_inf_nan=False)   # số tiền / số dư ví (không gửi số dư tuyệt đối)
     note_tags: list[Literal["fee", "debt_collection", "urgent"]] = Field(default_factory=list, max_length=3)   # nhãn từ nội dung CK (không gửi chữ gốc)
+    unverified_case_count: int = Field(default=0, ge=0, description="Bank-scoped links to suspicious AI cases; unverified, not a confirmed recipient warning")
+    unscoped_report_count: int = Field(default=0, ge=0, description="Number-only report matches with unknown bank/type; cannot alone justify hold")
     customer_says_coached: bool = False   # khách trả lời "có người đang hướng dẫn tôi chuyển"
 
 class TransferDecision(Contract):

@@ -75,7 +75,12 @@ class Simulator:
     def new_loan(self):
         a = khach.tools.q("SELECT app_id, phone, full_name, ref1_phone, ref1_name FROM apps WHERE status='DISBURSED' ORDER BY random() LIMIT 1")[0]
         amount = self.rng.randrange(2_000_000, 20_000_001, 500_000)
-        khach.tools.run("INSERT INTO khach_loans (phone, amount, disbursed_at) VALUES (?,?,?)", a["phone"], amount, khach.now_iso())
+        from app.backend.events import publish
+        ts = khach.now_iso()
+        with khach.tools.transaction():
+            lid = khach.tools.q("INSERT INTO khach_loans (phone,app_id,amount,disbursed_at) VALUES (?,?,?,?) RETURNING loan_id",
+                               a["phone"],a["app_id"],amount,ts)[0]["loan_id"]
+            publish(khach.tools,"loan","KL"+str(lid),a["app_id"],ts,simulated=True)
         self.active.append((a, amount))
         self.stats["loans"] += 1
         self.stats["loan_amount"] += amount

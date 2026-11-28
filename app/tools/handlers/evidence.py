@@ -18,6 +18,8 @@ def get_evidence(store: GraphStore, request: EvidenceInput, views: GraphViews) -
     elif evidence["table"] == "ai_entity_decisions":
         from .entities import decision_view
         record = decision_view(store, record)
+    elif evidence["table"] == "live_loans":
+        record = {k: record[k] for k in ("loan_id", "amount", "disbursed_at")}
     else:
         record = views.report(record)
     return {"edge": views.edge(edge), "source_table": evidence["table"], "record": record}

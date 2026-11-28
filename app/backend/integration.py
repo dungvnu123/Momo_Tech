@@ -4,12 +4,12 @@ import json
 from pathlib import Path
 
 from app.agents.investigation import InvestigationAgent
-from app.ai.shield.indicators import canonical_indicator
 from app.ai.transfer.schemas import TransferCheck
 from app.types.schemas import AgentContext
 
 from . import mock_ai
 from .agent_tools import BackendAgentTools
+from .report_view import report_view
 
 RULES = "luật (chưa cấu hình AI)"
 
@@ -29,12 +29,7 @@ class BackendAI:
         if not self.ready():
             return {**mock_ai.analyze_report(text), "mode": RULES}
         result = await self.service.analyze_report(text)
-        indicators = {"accounts": [], "phones": [], "urls": []}
-        for item in result.indicators:
-            canonical = canonical_indicator(item)
-            group = "accounts" if item.kind == "bank_account" else "urls" if item.kind == "url" else "phones"
-            indicators[group].append(canonical.rsplit(":", 1)[-1] if group != "urls" else canonical.split(":", 1)[-1])
-        return {**result.model_dump(), "indicators": indicators, "mode": "gemini"}
+        return report_view(result)
 
     async def check_transfer(self, ctx):
         if not self.ready():
@@ -49,6 +44,8 @@ class BackendAI:
                                 recipient_ring_senders=(ctx.get("ring_case") or {}).get("n_senders", 0),
                                 share_of_balance=min(1, ctx["amount"] / ctx["balance"]) if ctx.get("balance") else None,
                                 note_tags=mock_ai.note_tags(ctx.get("note")),
+                                unverified_case_count=ctx.get("unverified_case_count",0),
+                                unscoped_report_count=ctx.get("unscoped_report_count",0),
                                 customer_says_coached=bool(ctx.get("coached")))
         result = await self.service.check_transfer(request)
         return {**result.model_dump(), "message_for_customer": result.advice, "mode": "gemini"}
@@ -82,10 +79,6 @@ class BackendAI:
                 case["tool_steps"] = data["steps"]
                 case["model_turns"] = data["model_turns"]
                 if data["status"] == "completed":
-                    self.store.db.execute("INSERT OR REPLACE INTO cases VALUES (?,?,?,?,?,?)",
-                                          (alert["alert_id"], alert["cid"], case["verdict"], json.dumps(case["members"]),
-                                           json.dumps(case["victims"]), json.dumps(case, ensure_ascii=False)))
-                    self.store.db.execute("UPDATE alerts SET verdict=?, case_conf=? WHERE alert_id=?",
-                                          (case["verdict"], case["confidence"], alert["alert_id"]))
-                    self.store.db.commit()
+                    from .events.results import persist_case
+                    persist_case(self.store, alert, case)
                 yield {"type": "case", "case": case}

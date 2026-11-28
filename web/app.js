@@ -177,13 +177,26 @@ async function net() {
   await loadAlerts(true);
   simInit();
   // cảnh báo phát sinh trực tiếp từ app khách → tự làm mới danh sách (khi đang mở màn này, không ở chế độ phát lại)
-  let lastTop = "";
+  let lastTop = "", lastEvents = "";
   setInterval(async () => {
     if (liveES || !$("#net").classList.contains("on") || document.hidden) return;
     try {
       const r = await api("alerts?sort=time&limit=1&latest=false"), top = r.items[0]?.alert_id || "";
       if (lastTop && top !== lastTop) { await loadAlerts(); $("#list-sub").textContent += " · có cảnh báo mới"; }
       lastTop = top;
+      const events = await api("ai/realtime/events?limit=20");
+      const signature = JSON.stringify(events.map((e) => [e.event_id,e.status]));
+      if (lastEvents && signature !== lastEvents) {
+        await loadAlerts();
+        if (current && !$("#investigate").disabled) {
+          const updated = events.some((e) => e.status === "completed" && e.result && JSON.parse(e.result).alert_id === current);
+          if (updated) {
+            const detail = await api("alerts/" + current);
+            if (detail.case) showCase(detail.case,true);
+          }
+        }
+      }
+      lastEvents = signature;
     } catch {}
   }, 15000);
 }

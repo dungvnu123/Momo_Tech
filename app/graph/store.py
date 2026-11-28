@@ -73,6 +73,16 @@ class GraphStore:
             raise KeyError(node_id)
         return {"id": row["id"], "kind": row["kind"], "attributes": json.loads(row["payload"])}
 
+    def latest_application_loan(self, app_id):
+        result = {**self.application(app_id),"loan_id":None}
+        if db.has_table(self.connection,"live_loans"):
+            row = self.connection.execute("SELECT payload FROM live_loans WHERE payload::jsonb->>'app_id'=? "
+                "ORDER BY payload::jsonb->>'disbursed_at' DESC,substring(id from 3)::bigint DESC LIMIT 1",(app_id,)).fetchone()
+            if row:
+                loan=json.loads(row[0])
+                result.update(amount=loan["amount"],disbursed_at=loan["disbursed_at"],loan_id=loan["loan_id"])
+        return result
+
     def edge(self, edge_id: str) -> dict:
         row = self.connection.execute("SELECT * FROM edges WHERE id = ?", (edge_id,)).fetchone()
         if row is None:
@@ -131,7 +141,7 @@ class GraphStore:
         if edge is None:
             raise KeyError(edge_id)
         table = edge["source_table"]
-        if table not in (*TABLES, *AI_TABLES):
+        if table not in (*TABLES, *AI_TABLES, "live_loans"):
             raise ValueError("Unknown source table")
         row = self.connection.execute(
             f"SELECT payload FROM {table} WHERE id = ?", (edge["source_id"],)

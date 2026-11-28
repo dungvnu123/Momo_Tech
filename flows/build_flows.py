@@ -15,9 +15,11 @@ from feature_flow.model import Group
 if __package__:
     from .backend_agent import backend_agent_pipeline
     from .batch_ai import batch_ai_pipeline
+    from .realtime_ai import realtime_ai_pipeline
 else:
     from backend_agent import backend_agent_pipeline
     from batch_ai import batch_ai_pipeline
+    from realtime_ai import realtime_ai_pipeline
 
 OUT = Path(__file__).resolve().parent.parent / "docs" / "flows"
 GROUP = "Thiên La"
@@ -422,5 +424,5 @@ def ha_tang():
 
 if __name__ == "__main__":
     for build in (kien_truc, ca_an_giang, agent_loop, vong_doi, realtime, hang_doi, backend_agent_pipeline, batch_ai_pipeline,
-                  app_khach, mo_phong, ha_tang):
+                  app_khach, mo_phong, ha_tang,realtime_ai_pipeline):
         print("saved:", build().save(OUT))
