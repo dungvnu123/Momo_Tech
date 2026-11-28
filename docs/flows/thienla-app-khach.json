@@ -281,7 +281,7 @@
     {
       "n": 5,
       "title": "Bộ kiểm tra",
-      "body": "Gemini quyết định chính; luật (app/backend/mock_ai.py) chỉ được nâng mức, và thay thế khi chưa cấu hình AI.",
+      "body": "Gemini quyết định chính; luật (app/backend/mock_ai/) chỉ được nâng mức, và thay thế khi chưa cấu hình AI.",
       "note": "",
       "note_type": "info",
       "badge": "AI"

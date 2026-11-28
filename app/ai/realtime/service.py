@@ -8,7 +8,7 @@ from time import monotonic
 
 from app.backend.integration import BackendAI
 from app.backend.store import Tools
-from app.backend.report_view import report_view
+from app.backend.knowledge.reports import report_view
 from app.graph.ingestion import ingest_event
 from app.graph.ingestion.clusters import persist_cluster
 from app.services.llm_client import LLMNotConfiguredError

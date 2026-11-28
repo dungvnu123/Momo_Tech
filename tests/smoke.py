@@ -1,4 +1,3 @@
-# path: tests/smoke.py
 """Kiểm tra hồi quy toàn bộ API (đội rủi ro + app khách) trên server đang chạy.
 Chạy: uv run python build.py && (server ở :4420) && python tests/smoke.py .env   — build lại để có dữ liệu demo sạch.
 """

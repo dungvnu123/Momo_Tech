@@ -18,7 +18,7 @@ Chủ đề dự thi: **Chống lừa đảo** (chính) · An ninh mạng · Tr�
 
 Hạ tầng: **PostgreSQL 16 trong Docker** + web app FastAPI. Cấu hình ở `.env` (chép từ `.env.example`, **không commit**).
 Mọi dữ liệu nằm trong Postgres: schema `public` (nghiệp vụ, cảnh báo, app khách), `graph` (đồ thị bằng chứng), `ai_cache`
-(bộ nhớ đệm AI). Lớp [app/db.py](app/db.py) ánh xạ tên "database" kiểu cũ (`thienla.db`, `data/graph.db`) sang schema.
+(bộ nhớ đệm AI). Lớp [app/db/](app/db/) ánh xạ tên "database" kiểu cũ (`thienla.db`, `data/graph.db`) sang schema.
 
 ```bash
 cp .env.example .env               # đổi POSTGRES_PASSWORD, THIENLA_PASSWORD, THIENLA_SECRET, DEMO_PIN; điền LLM_API_KEY nếu dùng Gemini
@@ -41,7 +41,7 @@ uv run uvicorn app.main:app --host 127.0.0.1 --port 4420
 | http://localhost:4420/docs | Swagger (tắt khi đặt mật khẩu) |
 
 **AI:** có `LLM_API_KEY` → Lá chắn, kiểm tra chuyển tiền và Thám tử gọi **Gemini** (Agent kế thừa `BaseAgent`, tối đa
-12 tool call, kiểm chứng nguồn). Chưa có key → các chức năng đó tự rơi về **bản luật** ([app/backend/mock_ai.py](app/backend/mock_ai.py)),
+12 tool call, kiểm chứng nguồn). Chưa có key → các chức năng đó tự rơi về **bản luật** ([app/backend/mock_ai/](app/backend/mock_ai/)),
 ghi rõ `mode` trên giao diện — demo vẫn chạy được. `build.py` luôn dựng cảnh báo và kết luận mẫu bằng luật (không gọi LLM);
 bấm **Điều tra** để chạy Gemini và thay kết luận mẫu. Chi tiết: [docs/backend_integration.md](docs/backend_integration.md).
 
@@ -68,7 +68,7 @@ Luồng AI cho sự kiện mới từ app khách, cập nhật graph và tự đ
 `AI_REALTIME_ENABLED=0` để xử lý từng sự kiện qua API.
 
 ```bash
-uv run python -m unittest discover -s tests          # 175 test, chạy trên database <tên>_test riêng, tự dọn
+uv run python -m unittest discover -s tests          # 176 test, chạy trên database <tên>_test riêng, tự dọn
 uv run python -X utf8 build.py && python tests/smoke.py .env   # server đang chạy ở :4420 — 62 phép thử API đầu-cuối
 ```
 

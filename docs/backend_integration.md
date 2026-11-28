@@ -15,11 +15,11 @@ mà file chưa tồn tại sẽ báo lỗi.
 | `POST /api/khach/report/{id}` (app ví khách) | `BackendAI.analyze_report` | Tin từ kênh chính thức đã xác thực không gọi AI |
 
 Chưa cấu hình Gemini (`LLM_API_KEY` trống) → `BackendAI` tự rơi về bản luật
-(`backend/mock_ai.py`) cho cả 3 hàm `analyze_report` / `check_transfer` /
+(`backend/mock_ai/`) cho cả 3 hàm `analyze_report` / `check_transfer` /
 `investigate`, ghi `mode = "luật (chưa cấu hình AI)"`. Riêng `POST /api/investigations`
 (đọc graph) vẫn trả `503`.
 
-`backend/integration.py` chỉ chuyển đổi hợp đồng. Các prompt, validation và
+`backend/integration/` chỉ chuyển đổi hợp đồng. Các prompt, validation và
 vòng lặp model/tool vẫn ở module AI và Agent hiện có. `backend/http/` chia theo
 chức năng để debug từng API; không đặt nghiệp vụ AI vào middleware.
 
@@ -42,7 +42,7 @@ chỉ dùng ở `/api/metrics`, không đưa vào Agent hay tool.
 
 ## Cấu hình và giới hạn
 
-- `THIENLA_DB`: tên dữ liệu nghiệp vụ, mặc định `thienla.db` → schema `public` trong PostgreSQL (xem `app/db.py`).
+- `THIENLA_DB`: tên dữ liệu nghiệp vụ, mặc định `thienla.db` → schema `public` trong PostgreSQL (xem `app/db/`).
 - `THIENLA_DATA`: thư mục CSV và đáp án cho trang đánh giá.
 - `GRAPH_DATABASE`: graph PostgreSQL cho API điều tra độc lập; build từ cùng CSV.
 - `LLM_API_KEY`, `LLM_MODEL_NAME`: cấu hình Gemini, không commit `.env`.
@@ -61,7 +61,7 @@ Swagger/OpenAPI được tắt. WebSecurityMiddleware dùng ASGI, áp dụng gi�
 lượt gọi và header bảo mật mà không gom các chunk SSE. Bộ đếm riêng theo app;
 khi chạy nhiều worker cần bộ đếm dùng chung. `/flows/` giữ CSP riêng của Feature Flow.
 
-`build.py` và `engine.py` dùng `backend/mock_ai.py` để phát lại toàn bộ dữ liệu
+`build.py` và `engine.py` dùng `backend/mock_ai/` để phát lại toàn bộ dữ liệu
 offline và tạo kết quả mẫu nhanh. Không thay hàng trăm lượt dựng mẫu thành gọi
 LLM tự động. Các API AI độc lập cho entity resolution và triage vẫn hoạt động;
 engine dựng dữ liệu chưa tự gọi hai API này. Thống kê của trang đánh giá gồm
@@ -111,7 +111,7 @@ Pydantic tiếp tục kiểm tra toàn bộ giới hạn và dẫn nguồn ở p
 
 ## Hợp đồng `TransferCheck` — tín hiệu backend gửi cho AI
 
-Backend (`build_ctx` trong `app/khach.py`, `transfer_ctx` trong `backend/http/transfer.py`) dựng ngữ cảnh,
+Backend (`build_ctx` trong `app/backend/wallet/`, `transfer_ctx` trong `backend/http/transfer.py`) dựng ngữ cảnh,
 `BackendAI.check_transfer` chuyển thành `TransferCheck` (`app/ai/transfer/schemas.py`, `extra="forbid"`).
 Trường mới đều tuỳ chọn — thiếu thì coi như không có tín hiệu.
 

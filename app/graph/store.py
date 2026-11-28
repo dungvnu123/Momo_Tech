@@ -11,7 +11,6 @@ AI_TABLES = ("ai_report_analysis", "ai_entity_decisions", "ai_clusters")
 
 class GraphStore:
     def __init__(self, database: str | Path, *, read_only: bool = False) -> None:
-        # PostgreSQL: "database" kiểu cũ (đường dẫn) → 1 schema riêng (xem app/db.py). Khoá ngoại Postgres luôn bật.
         self.connection = db.connect(database, read_only=read_only)   # chỉ đọc + chưa có → FileNotFoundError như cũ
         if read_only:
             return

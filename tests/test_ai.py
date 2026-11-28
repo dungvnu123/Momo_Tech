@@ -9,11 +9,14 @@ from pydantic import ValidationError
 
 import test_graph_tools
 from app.ai.evaluation import accuracy, evaluate, select_reports
-from app.ai.features import cluster_summary, entity_candidates, entity_record
-from app.ai.indicators import canonical_indicator
+from app.ai.triage.features import cluster_summary
+from app.ai.entities.candidates import entity_candidates, entity_record
+from app.ai.shield.indicators import canonical_indicator
 from app.ai.pipeline import analyze_stored_reports, triage_groups
-from app.ai.runner import AIOutputError
-from app.ai.schemas import EntityDecision, EntityPair, Indicator, ReportAnalysis, TriageDecision
+from app.ai.common.runner import AIOutputError
+from app.ai.entities.schemas import EntityDecision, EntityPair
+from app.ai.shield.schemas import Indicator, ReportAnalysis
+from app.ai.triage.schemas import TriageDecision
 from app.ai.service import AIService
 from app.graph.ai_store import AIStore
 from app.graph import build_graph

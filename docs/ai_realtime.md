@@ -9,15 +9,15 @@ Giữ một InvestigationAgent kế thừa BaseAgent và workflow LangGraph đan
 | Module | Trách nhiệm |
 |---|---|
 | `app/backend/events/schema.py` | Migration bổ sung cột/index/bảng, không dựng lại dữ liệu |
-| `app/backend/events/wallet.py` | Ghi khoản vay/giao dịch/tin báo và outbox cùng transaction |
+| `app/backend/wallet/persistence.py` | Ghi khoản vay/giao dịch/tin báo và outbox cùng transaction |
 | `app/backend/events/store.py` | Sự kiện có khóa chống trùng |
-| `app/backend/events/results.py`, `knowledge.py` | Lưu case và liên kết người nhận có trạng thái chưa xác minh, tra cứu theo ngân hàng |
+| `app/backend/cases/repository.py`, `app/backend/knowledge/recipients.py` | Lưu case và liên kết người nhận có trạng thái chưa xác minh, tra cứu theo ngân hàng |
 | `app/backend/evidence/loans.py`, `live_transactions.py`, `senders.py` | Đọc khoản vay và KT đúng snapshot, cùng phân trang cho dữ liệu cũ/mới |
 | `app/graph/ingestion/` | Project bản ghi, cạnh và nhận định có nguồn, receipt chống phát lại |
 | `app/ai/realtime/` | Claim/retry, đọc nguồn, khoanh ứng viên, tính đặc trưng, điều phối AI |
 | `app/controller/ai/realtime.py` | API trạng thái, xử lý một sự kiện và thử lại |
 
-`khach.py` gọi các hàm ghi nghiệp vụ; không chứa vòng lặp Agent. Worker được
+`backend/wallet/` gọi các hàm ghi nghiệp vụ; không chứa vòng lặp Agent. Worker được
 khởi tạo và đóng theo lifespan ứng dụng trong `backend/routes.py`. Worker dùng
 kết nối PostgreSQL riêng. Simulator cũng phát sự kiện nhưng không gọi LLM.
 
