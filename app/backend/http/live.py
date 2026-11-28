@@ -9,7 +9,7 @@ def register(app, tools, adapter, META):
     @app.get("/api/live")
     async def live(start: str = "2026-11-01", day_seconds: float = 12):
         """Phát lại realtime: đồng hồ mô phỏng chạy nhanh (1 ngày = day_seconds giây), đẩy cảnh báo đúng lúc nó sinh ra.
-        Cảnh báo do app/engine.py sinh khi xử lý từng sự kiện theo thời gian; chạy thật thì engine đọc thẳng hàng đợi sự kiện."""
+        Cảnh báo do app/engine/engine.py sinh khi xử lý từng sự kiện theo thời gian; chạy thật thì engine đọc thẳng hàng đợi sự kiện."""
         from datetime import datetime, timedelta
         try:
             datetime.fromisoformat(start)

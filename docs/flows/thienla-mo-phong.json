@@ -6,7 +6,7 @@
   "visibility": "private",
   "doc_md": "",
   "group": "Thiên La",
-  "subtitle": "app/sim.py — tự sinh khoản vay + chuyển tiền ngẫu nhiên để hệ thống 'đang sống' khi demo.",
+  "subtitle": "app/backend/simulation/ — tự sinh khoản vay + chuyển tiền ngẫu nhiên để hệ thống 'đang sống' khi demo.",
   "duration": "kỹ thuật",
   "level": "Chi tiết",
   "learn": [

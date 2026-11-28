@@ -34,6 +34,3 @@ def register(app, tools, adapter, META):
                 seen.add(key); pick.append({"label": {"scam": "Tin đòi chuyển tiền", "safe": "Tin chính thức", "victim": "Người bị hại kể lại",
                                                       "injection": "Tin có câu lừa AI", "suspicious": "Tin đáng ngờ"}[key], "text": r["raw_text"]})
         return pick
-
-
-    # ── Cảnh báo lúc chuyển tiền ──────────────────────────────────────────────────────────

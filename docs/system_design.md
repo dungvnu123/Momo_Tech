@@ -37,7 +37,7 @@ flowchart LR
     A5[Trả nợ + hẹn giờ kiểm tra kỳ 1] --> EV
     EV[(Dòng sự kiện<br/>theo thời gian)]
   end
-  EV --> ENG["Bộ máy realtime<br/>app/engine.py"]
+  EV --> ENG["Bộ máy realtime<br/>app/engine/engine.py"]
   ENG -->|chuyển tiền| TC["Cảnh báo lúc chuyển tiền<br/>ai.check_transfer"]
   ENG -->|cập nhật dần| G[(Đồ thị union-find)]
   G --> TR["AI sàng lọc cụm<br/>ai.triage_clusters"]
@@ -53,14 +53,14 @@ flowchart LR
 |---|---|---|
 | Sinh dữ liệu | `gen_data.py` | 7 bảng có mốc thời gian, cài sẵn đường dây + nhiễu; tự kiểm tra + baseline luật; `--seed` cho bộ chấm chéo |
 | Dựng sẵn | `build.py` | Nạp **PostgreSQL** (COPY hàng loạt, ~1,3 triệu dòng) → cho bộ máy chạy qua **741.593 sự kiện** (~8 giây) → 347 cảnh báo → điều tra trước cảnh báo mới nhất của mỗi cụm |
-| Bộ máy realtime | `app/engine.py` | Xử lý từng sự kiện, cập nhật dần đồ thị, sinh cảnh báo; không nhìn trước tương lai |
-| **AI** | `app/ai/`, `app/agents/investigation/`, `app/backend/integration.py` | Gemini qua schema; Agent kế thừa BaseAgent, gọi tool và kiểm chứng nguồn; không đọc đáp án. Chưa có key → tự rơi về bản luật |
-| Bản luật | `app/backend/mock_ai.py` | Build/engine/mô phỏng dùng luật để dựng cảnh báo, kết luận mẫu và kiểm tra chuyển tiền nhanh; ghi rõ `mode` |
+| Bộ máy realtime | `app/engine/engine.py` | Xử lý từng sự kiện, cập nhật dần đồ thị, sinh cảnh báo; không nhìn trước tương lai |
+| **AI** | `app/ai/`, `app/agents/investigation/`, `app/backend/integration/` | Gemini qua schema; Agent kế thừa BaseAgent, gọi tool và kiểm chứng nguồn; không đọc đáp án. Chưa có key → tự rơi về bản luật |
+| Bản luật | `app/backend/mock_ai/` | Build/engine/mô phỏng dùng luật để dựng cảnh báo, kết luận mẫu và kiểm tra chuyển tiền nhanh; ghi rõ `mode` |
 | Tool chỉ đọc | `app/backend/agent_tools.py`, `app/backend/store.py`, `app/tools/` | Tool backend có mốc `as_of`; tool graph đọc schema `graph`; dòng thời gian hồ sơ |
-| Bảo mật | `app/security.py`, `app/middleware/`, `app/backend/http/auth.py` | Đăng nhập đội rủi ro + phiên khách, phiên ký HMAC, PIN băm scrypt, giới hạn lượt gọi, header bảo mật |
-| **App ví khách** | `app/khach.py`, `web/vi/` | Khách đăng nhập SĐT + PIN: ví, khoản vay, hộp tin, báo lừa đảo, tra cứu người nhận, chuyển tiền — mỗi lần chuyển được chấm điểm 0–100, đối chiếu **đường dây đã điều tra** (`ring_accounts`), SIMO, tin báo; tạm giữ/báo lừa → cảnh báo vào hàng đợi ngay |
-| **Mô phỏng hoạt động** | `app/sim.py` | Tự sinh khoản vay + chuyển tiền ngẫu nhiên (bình thường / bị dụ vay / giả thu nợ / người thân nhờ gấp), đi qua đúng `execute_transfer` của app khách |
-| Hạ tầng | `docker-compose.yml`, `Dockerfile`, `app/db.py` | Postgres 16 (schema `public` / `graph` / `ai_cache`) + app trong container (user không phải root); `.env` chứa bí mật, không commit |
+| Bảo mật | `app/security/`, `app/middleware/`, `app/backend/http/auth.py` | Đăng nhập đội rủi ro + phiên khách, phiên ký HMAC, PIN băm scrypt, giới hạn lượt gọi, header bảo mật |
+| **App ví khách** | `app/backend/wallet/`, `web/vi/` | Khách đăng nhập SĐT + PIN: ví, khoản vay, hộp tin, báo lừa đảo, tra cứu người nhận, chuyển tiền — mỗi lần chuyển được chấm điểm 0–100, đối chiếu **đường dây đã điều tra** (`ring_accounts`), SIMO, tin báo; tạm giữ/báo lừa → cảnh báo vào hàng đợi ngay |
+| **Mô phỏng hoạt động** | `app/backend/simulation/` | Tự sinh khoản vay + chuyển tiền ngẫu nhiên (bình thường / bị dụ vay / giả thu nợ / người thân nhờ gấp), đi qua đúng `execute_transfer` của app khách |
+| Hạ tầng | `docker-compose.yml`, `Dockerfile`, `app/db/` | Postgres 16 (schema `public` / `graph` / `ai_cache`) + app trong container (user không phải root); `.env` chứa bí mật, không commit |
 | Web | `app/main.py`, `web/` | FastAPI + 1 trang HTML/JS thuần + Cytoscape; feature-flow gắn ở `/flows` |
 
 **Stack:** Python 3.12, FastAPI, **PostgreSQL 16** (psycopg 3) trong Docker, Cytoscape.js (dùng bản đóng gói sẵn của feature-flow, không gọi CDN), font Be Vietnam Pro; quản lý môi trường bằng `uv`.
@@ -99,7 +99,7 @@ Cửa sổ dữ liệu **01/06 → 25/11/2026**. **Không có cột "quá hạn"
 
 ---
 
-## 4. Bộ máy realtime (`app/engine.py`)
+## 4. Bộ máy realtime (`app/engine/engine.py`)
 
 **Sự kiện** (sắp theo thời gian): `apply` (nộp hồ sơ) · `transfer` · `report` · `repayment` · `due_check` (đến hạn kỳ 1 + 10 ngày — lịch hẹn giờ của chính hệ thống, không phải dữ liệu tương lai).
 
@@ -125,8 +125,8 @@ sự kiện, sàng lọc và tự gọi Agent. Tool đọc được khoản vay 
 tách held khỏi tiền đã chuyển. Chi tiết và giới hạn: [ai_realtime.md](ai_realtime.md).
 
 Các API tương tác dùng Gemini qua `LLM_API_KEY`/`LLM_MODEL_NAME` và **tool schema**.
-`backend/integration.py` đổi hợp đồng web sang AIService và InvestigationAgent. Engine/build
-vẫn dùng `backend/mock_ai.py` để dựng mẫu offline; chưa tự gọi AI entity resolution/triage
+`backend/integration/` đổi hợp đồng web sang AIService và InvestigationAgent. Engine/build
+vẫn dùng `backend/mock_ai/` để dựng mẫu offline; chưa tự gọi AI entity resolution/triage
 trong mỗi lần phát lại toàn bộ sự kiện. Chi tiết triển khai: `docs/backend_integration.md`.
 
 | Hàm | Vào | Ra | Ghi chú |
@@ -234,7 +234,7 @@ Luật cũ trượt vì 2 lỗ kinh điển: **chia nhỏ tiền** (A chuyển 2
 
 ---
 
-## 9. Bảo mật (đã rà soát và sửa — `app/security.py`)
+## 9. Bảo mật (đã rà soát và sửa — `app/security/`)
 
 | Lớp | Biện pháp | Đã kiểm tra |
 |---|---|---|
@@ -275,7 +275,7 @@ thien-la/
 ├── app/  main.py · engine.py · db.py · security.py · khach.py (app ví) · sim.py (mô phỏng) · middleware/ · backend/ · ai/ · agents/ · graph/ · tools/
 ├── web/  index.html · app.js · style.css (đội rủi ro)  ·  vi/ index.html · vi.js · vi.css (app khách)
 ├── flows/build_flows.py · flows/backend_agent.py · flows/batch_ai.py · flows/realtime_ai.py → docs/flows/*.json  (12 luồng trình chiếu)
-├── tests/  175 test (unittest) · smoke.py (62 phép thử API đầu-cuối)
+├── tests/  176 test (unittest) · smoke.py (62 phép thử API đầu-cuối)
 └── docs/ system_design.md · huong_dan_su_dung.md · Thien_La_gioi_thieu.docx · hdsd/ · tools/
 ```
 

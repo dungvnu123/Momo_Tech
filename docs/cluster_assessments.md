@@ -79,7 +79,7 @@ biệt với đánh giá cụm/vai trò, không thực hiện chặn tiền th�
 
 Lưới & Thám tử hiển thị đánh giá cụm, vai trò và nhóm chưa đánh giá. Bấm
 **Xem nguồn** để mở ToolStep đã lưu: mã bản ghi, số tiền, thời điểm và độ
-phủ. `web/case_evidence.js` phụ trách phần này. Trace pipeline đọc bằng:
+phủ. `web/js/investigation/evidence.js` phụ trách phần này. Trace pipeline đọc bằng:
 
 `GET /api/ai/pipeline/runs/{run_id}/traces/{cluster_id}`
 

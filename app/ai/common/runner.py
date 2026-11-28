@@ -19,7 +19,7 @@ class StructuredRunner:
         self.cache_path = Path(cache_path) if cache_path else None
         self.cache_hits = self.model_calls = 0
         self._db = None
-        if self.cache_path:   # PostgreSQL: 1 kết nối tự commit cho cả runner (schema theo đường dẫn cache — xem app/db.py)
+        if self.cache_path:
             self._db = db.connect(self.cache_path, autocommit=True)
             self._db.execute("CREATE TABLE IF NOT EXISTS responses (key TEXT PRIMARY KEY, payload TEXT NOT NULL)")
 

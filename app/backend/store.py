@@ -1,4 +1,3 @@
-# path: app/backend/store.py
 """Tool trên PostgreSQL (schema public) — agent Thám tử (giả lập hay Gemini) đều gọi qua đây.
 Mọi CCCD/SĐT trả ra đều đã che bớt (mask)."""
 import json
